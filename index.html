@@ -1,0 +1,2869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PATTERNLAB — Custom Pattern Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #c8ff00;
+    --accent2: #7b61ff;
+    --accent3: #ff4d6d;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --font-mono: 'Space Mono', monospace;
+    --font-display: 'Syne', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-size: 15px; font-weight: 800; letter-spacing: 0.18em;
+    color: var(--accent); font-family: var(--font-mono);
+  }
+  .logo span { color: var(--muted); }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* LAYOUT */
+  .app {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    height: calc(100vh - 57px);
+    overflow: hidden;
+  }
+
+  /* PANELS */
+  .panel {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+
+  .panel-section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
+    color: var(--muted); text-transform: uppercase;
+    font-family: var(--font-mono);
+    margin-bottom: 14px;
+  }
+
+  /* CANVAS AREA */
+  .canvas-area {
+    background: #060608;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    background-image: radial-gradient(circle at 50% 50%, #141420 0%, #060608 70%);
+  }
+  .canvas-wrap {
+    position: relative;
+    box-shadow: 0 0 0 1px var(--border), 0 32px 80px rgba(0,0,0,0.7);
+  }
+  .canvas-wrap.transparent-bg {
+    background-image: linear-gradient(45deg, #2a2a3a 25%, transparent 25%),
+      linear-gradient(-45deg, #2a2a3a 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #2a2a3a 75%),
+      linear-gradient(-45deg, transparent 75%, #2a2a3a 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    background-color: #1a1a24;
+  }
+  #patternCanvas {
+    display: block;
+    cursor: crosshair;
+  }
+  .canvas-ruler-x, .canvas-ruler-y {
+    position: absolute;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--muted);
+    opacity: 0.5;
+  }
+  .canvas-ruler-x { bottom: -20px; width: 100%; display: flex; justify-content: space-between; padding: 0 4px; }
+  .canvas-ruler-y { right: -28px; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+
+  /* CONTROLS */
+  .control-group { margin-bottom: 14px; }
+  .control-label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--muted); margin-bottom: 6px;
+    font-family: var(--font-mono);
+  }
+  .control-label .val {
+    color: var(--accent); font-size: 11px;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%; height: 3px;
+    background: var(--border);
+    border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(200,255,0,0.4);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  /* SHAPE PICKER */
+  .shape-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .shape-btn {
+    aspect-ratio: 1;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    color: var(--muted);
+    font-size: 18px;
+  }
+  .shape-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .shape-btn.active {
+    border-color: var(--accent);
+    background: rgba(200,255,0,0.08);
+    color: var(--accent);
+    box-shadow: 0 0 12px rgba(200,255,0,0.15);
+  }
+
+  /* PATTERN TYPE */
+  .pattern-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .tab-btn {
+    padding: 7px 6px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    color: var(--muted);
+    font-size: 10px; font-weight: 600;
+    font-family: var(--font-mono);
+    letter-spacing: 0.08em;
+    cursor: pointer; transition: all 0.15s;
+    text-align: center;
+  }
+  .tab-btn:hover { border-color: var(--accent2); color: var(--text); }
+  .tab-btn.active {
+    background: rgba(123,97,255,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* COLOR PALETTE */
+  .color-row {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  }
+  .color-swatch {
+    width: 26px; height: 26px; border-radius: 6px;
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.15s; position: relative;
+  }
+  .color-swatch.active {
+    border-color: var(--accent);
+    transform: scale(1.15);
+    box-shadow: 0 0 8px rgba(200,255,0,0.4);
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+
+  input[type=color] {
+    width: 26px; height: 26px;
+    border-radius: 6px; border: 2px solid var(--border);
+    padding: 0; cursor: pointer; background: none;
+    overflow: hidden;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type=color]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
+  /* PALETTE ROW MULTI */
+  .palette-multi {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .palette-color {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 2px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+    position: relative;
+  }
+  .palette-color.active { border-color: var(--accent); }
+  .palette-color .rm {
+    display: none;
+    position: absolute; top: -5px; right: -5px;
+    width: 12px; height: 12px;
+    background: var(--accent3); border-radius: 50%;
+    font-size: 8px; color: white;
+    align-items: center; justify-content: center;
+    line-height: 1;
+  }
+  .palette-color:hover .rm { display: flex; }
+  .add-color-btn {
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 2px dashed var(--border);
+    background: none; color: var(--muted);
+    cursor: pointer; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .add-color-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* TOGGLE */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .toggle-label { font-size: 11px; font-family: var(--font-mono); color: var(--muted); }
+  .toggle {
+    width: 36px; height: 20px;
+    background: var(--border); border-radius: 10px;
+    cursor: pointer; position: relative; transition: background 0.2s;
+    border: none; outline: none;
+  }
+  .toggle.on { background: rgba(200,255,0,0.3); }
+  .toggle::after {
+    content: '';
+    position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    background: var(--muted); border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle.on::after { transform: translateX(16px); background: var(--accent); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 9px 14px;
+    border-radius: 7px;
+    font-family: var(--font-mono);
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer; border: none;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 7px;
+    white-space: nowrap;
+  }
+  .btn-accent {
+    background: var(--accent); color: #000;
+  }
+  .btn-accent:hover { background: #d8ff20; box-shadow: 0 0 20px rgba(200,255,0,0.3); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent; color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+  .btn-outline:hover { border-color: var(--accent2); color: var(--accent2); }
+  .btn-ghost {
+    background: var(--surface2); color: var(--muted);
+    border: 1.5px solid var(--border);
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--text); }
+  .btn-danger {
+    background: rgba(255,77,109,0.12); color: var(--accent3);
+    border: 1.5px solid rgba(255,77,109,0.3);
+  }
+  .btn-danger:hover { background: rgba(255,77,109,0.2); }
+
+  .btn-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* EXPORT SECTION */
+  .export-grid {
+    display: flex; flex-direction: column; gap: 7px;
+  }
+  .export-btn-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .export-type-label {
+    font-size: 10px; font-family: var(--font-mono);
+    color: var(--muted); width: 40px; flex-shrink: 0;
+  }
+
+  /* PRESETS */
+  .preset-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 7px;
+  }
+  .preset-card {
+    border-radius: 8px; overflow: hidden;
+    border: 1.5px solid var(--border);
+    cursor: pointer; transition: all 0.15s;
+    position: relative;
+  }
+  .preset-card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .preset-card canvas { display: block; width: 100%; }
+  .preset-card .preset-name {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    background: rgba(10,10,15,0.85);
+    font-size: 9px; font-family: var(--font-mono);
+    color: var(--muted); padding: 4px 6px;
+    letter-spacing: 0.1em;
+  }
+  .preset-card .preset-del {
+    display: none;
+    position: absolute; top: 4px; right: 4px;
+    width: 16px; height: 16px;
+    background: var(--accent3); border-radius: 50%;
+    font-size: 9px; color: white; border: none; cursor: pointer;
+    align-items: center; justify-content: center; line-height: 1;
+    font-family: var(--font-mono);
+  }
+  .preset-card:hover .preset-del { display: flex; }
+
+  /* SIZE INPUT */
+  .size-row {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .size-input {
+    flex: 1; padding: 7px 8px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: var(--font-mono); font-size: 11px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .size-input:focus { border-color: var(--accent2); }
+  .size-sep { color: var(--muted); font-size: 14px; }
+
+  /* STATUS BAR */
+  .status-bar {
+    position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--muted);
+    display: flex; gap: 16px;
+    pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  }
+  .status-bar span { color: var(--text); }
+
+  /* SEED */
+  .seed-row {
+    display: flex; gap: 6px;
+  }
+  .seed-input {
+    flex: 1; padding: 7px 8px;
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: var(--font-mono); font-size: 11px;
+    outline: none; transition: border-color 0.15s;
+  }
+  .seed-input:focus { border-color: var(--accent2); }
+  #presetNameInput:focus { border-color: var(--accent2) !important; }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; right: 30px;
+    background: var(--accent); color: #000;
+    font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+    padding: 10px 18px; border-radius: 8px;
+    opacity: 0; transform: translateY(10px);
+    transition: all 0.3s; pointer-events: none;
+    z-index: 9999; letter-spacing: 0.08em;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* FIGMA badge */
+  .figma-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(123,97,255,0.15); border: 1px solid rgba(123,97,255,0.3);
+    border-radius: 4px; padding: 3px 8px;
+    font-family: var(--font-mono); font-size: 9px; color: var(--accent2);
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PATTERN<span>LAB</span></div>
+  <div class="header-actions">
+    <span class="figma-badge">
+      <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+        <path d="M5 7a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" fill="#1ABCFE"/>
+        <path d="M1 11a2 2 0 0 1 2-2h2v2a2 2 0 1 1-4 0z" fill="#0ACF83"/>
+        <path d="M5 1v4H3a2 2 0 0 1 0-4h2z" fill="#FF7262"/>
+        <path d="M1 3a2 2 0 0 0 2 2h2V1H3A2 2 0 0 0 1 3z" fill="#F24E1E"/>
+        <path d="M5 5h2a2 2 0 0 1 0 4H5V5z" fill="#A259FF"/>
+      </svg>
+      FIGMA READY
+    </span>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- LEFT PANEL -->
+  <div class="panel">
+    <div class="panel-section">
+      <div class="panel-title">Pattern Type</div>
+      <div class="pattern-tabs">
+        <button class="tab-btn active" data-type="grid">GRID</button>
+        <button class="tab-btn" data-type="hex">HEX</button>
+        <button class="tab-btn" data-type="diagonal">DIAGONAL</button>
+        <button class="tab-btn" data-type="radial">RADIAL</button>
+        <button class="tab-btn" data-type="wave">WAVE</button>
+        <button class="tab-btn" data-type="scatter">SCATTER</button>
+        <button class="tab-btn" data-type="brick">BRICK</button>
+        <button class="tab-btn" data-type="triangles">TRIANGLES</button>
+        <button class="tab-btn" data-type="lithex" style="grid-column:1/-1;background:rgba(200,160,60,0.08);border-color:rgba(200,160,60,0.3);color:#c8a040;">✦ LIT HEX</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Shape</div>
+      <div class="shape-grid">
+        <button class="shape-btn active" data-shape="circle" title="Circle">⬤</button>
+        <button class="shape-btn" data-shape="square" title="Square">⬛</button>
+        <button class="shape-btn" data-shape="diamond" title="Diamond">◆</button>
+        <button class="shape-btn" data-shape="triangle" title="Triangle">▲</button>
+        <button class="shape-btn" data-shape="cross" title="Cross">✚</button>
+        <button class="shape-btn" data-shape="star" title="Star">★</button>
+        <button class="shape-btn" data-shape="hexagon" title="Hexagon">⬡</button>
+        <button class="shape-btn" data-shape="ring" title="Ring">◯</button>
+        <button class="shape-btn" data-shape="line" title="Line">━</button>
+        <button class="shape-btn" data-shape="dot" title="Dot">·</button>
+        <button class="shape-btn" data-shape="wave" title="Wave">〜</button>
+        <button class="shape-btn" data-shape="arrow" title="Arrow">→</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Layout Controls</div>
+
+      <div class="control-group">
+        <div class="control-label">Spacing <span class="val" id="spacingVal">40</span></div>
+        <input type="range" id="spacing" min="10" max="120" value="40" step="2">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Size <span class="val" id="sizeVal">14</span></div>
+        <input type="range" id="size" min="2" max="60" value="14" step="1">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Rotation <span class="val" id="rotationVal">0°</span></div>
+        <input type="range" id="rotation" min="0" max="360" value="0" step="5">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Opacity <span class="val" id="opacityVal">100%</span></div>
+        <input type="range" id="opacity" min="10" max="100" value="100" step="5">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Jitter <span class="val" id="jitterVal">0</span></div>
+        <input type="range" id="jitter" min="0" max="30" value="0" step="1">
+      </div>
+
+      <div class="control-group">
+        <div class="control-label">Scale Variance <span class="val" id="scaleVarVal">0%</span></div>
+        <input type="range" id="scaleVar" min="0" max="100" value="0" step="5">
+      </div>
+
+      <div style="height:1px;background:var(--border);margin:14px 0 14px;"></div>
+      <div class="panel-title" style="margin-bottom:10px;">Opacity Variance</div>
+
+      <div class="control-group">
+        <div class="control-label">Variance Amount <span class="val" id="opacityVarVal">OFF</span></div>
+        <input type="range" id="opacityVar" min="0" max="100" value="0" step="5">
+      </div>
+
+      <div class="control-group" id="opacityRangeGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+        <div class="control-label">Min Opacity <span class="val" id="opacityMinVal">0%</span></div>
+        <input type="range" id="opacityMin" min="0" max="100" value="0" step="5">
+      </div>
+
+      <div class="control-group" id="opacityMaxGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+        <div class="control-label">Max Opacity <span class="val" id="opacityMaxVal">100%</span></div>
+        <input type="range" id="opacityMax" min="0" max="100" value="100" step="5">
+      </div>
+
+      <div class="control-group" id="opacityModeGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+        <div class="control-label" style="margin-bottom:8px;">Distribution Mode</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;">
+          <button class="tab-btn active" data-omode="random" style="font-size:9px;padding:5px 4px;">RANDOM</button>
+          <button class="tab-btn" data-omode="noise" style="font-size:9px;padding:5px 4px;">NOISE</button>
+          <button class="tab-btn" data-omode="radial" style="font-size:9px;padding:5px 4px;">RADIAL IN</button>
+          <button class="tab-btn" data-omode="radialOut" style="font-size:9px;padding:5px 4px;">RADIAL OUT</button>
+          <button class="tab-btn" data-omode="fadeY" style="font-size:9px;padding:5px 4px;">FADE ↓</button>
+          <button class="tab-btn" data-omode="fadeX" style="font-size:9px;padding:5px 4px;">FADE →</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Toggles</div>
+      <div class="toggle-row">
+        <span class="toggle-label">Stroke Only</span>
+        <button class="toggle" id="strokeToggle"></button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Alternate Row</span>
+        <button class="toggle" id="altRowToggle"></button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Multi-Color</span>
+        <button class="toggle on" id="multiColorToggle"></button>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Size Gradient</span>
+        <button class="toggle" id="gradientToggle"></button>
+      </div>
+      <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
+      <div class="toggle-row">
+        <span class="toggle-label" style="color:var(--text);">✦ Cursor Magnet</span>
+        <button class="toggle" id="magnetToggle"></button>
+      </div>
+      <div id="magnetControls" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;margin-top:4px;">
+        <div class="control-group">
+          <div class="control-label">Radius <span class="val" id="magnetRadiusVal">120</span></div>
+          <input type="range" id="magnetRadius" min="20" max="400" value="120" step="10">
+        </div>
+        <div class="control-group">
+          <div class="control-label">Strength <span class="val" id="magnetStrengthVal">2.5×</span></div>
+          <input type="range" id="magnetStrength" min="1.2" max="6" value="2.5" step="0.1">
+        </div>
+        <div class="toggle-row" style="margin-bottom:8px;">
+          <span class="toggle-label">Shrink Neighbours</span>
+          <button class="toggle" id="magnetPushToggle"></button>
+        </div>
+        <div class="control-group" id="magnetPushAmountGroup" style="margin-bottom:8px;opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+          <div class="control-label">Shrink Amount <span class="val" id="magnetPushAmountVal">1.0×</span></div>
+          <input type="range" id="magnetPushAmount" min="0.2" max="2.5" value="1.0" step="0.1">
+        </div>
+        <div class="control-group" style="margin-bottom:0;">
+          <div class="control-label">Distance Falloff <span class="val" id="magnetFalloffVal">0%</span></div>
+          <input type="range" id="magnetFalloff" min="0" max="100" value="0" step="5">
+        </div>
+      </div>
+    </div>
+
+    <!-- LIT HEX CONTROLS — shown only when patternType === lithex -->
+    <div class="panel-section" id="litHexPanel" style="display:none;">
+    <div class="panel-title" style="color:#c8a040;margin-bottom:14px;">✦ Lit Hex Settings</div>
+
+    <div class="control-group">
+      <div class="control-label">Cell Size <span class="val" id="litCellSizeVal">72</span></div>
+      <input type="range" id="litCellSize" min="20" max="200" value="72" step="2">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Gap <span class="val" id="litGapVal">5</span></div>
+      <input type="range" id="litGap" min="0" max="100" value="5" step="1">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Stroke Width <span class="val" id="litStrokeWidthVal">1.5</span></div>
+      <input type="range" id="litStrokeWidth" min="0.5" max="6" value="1.5" step="0.5">
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
+    <div class="panel-title" style="margin-bottom:10px;">Light Source</div>
+
+    <div style="display:flex;gap:12px;align-items:center;margin-bottom:14px;">
+      <div id="litDirWheel" style="
+        width:60px;height:60px;border-radius:50%;flex-shrink:0;cursor:pointer;
+        border:1.5px solid var(--border);position:relative;
+        background:radial-gradient(circle,#1a1a24 0%,#0a0a0f 100%);">
+        <div id="litDirArrow" style="
+          position:absolute;top:50%;left:50%;width:20px;height:2px;
+          background:#c8a040;transform-origin:left center;border-radius:1px;
+          pointer-events:none;"></div>
+      </div>
+      <div>
+        <span id="litAngleDeg" style="color:#c8a040;font-size:14px;font-weight:700;font-family:var(--font-mono);display:block;">45°</span>
+        <span style="font-size:10px;color:var(--muted);font-family:var(--font-mono);">drag to rotate</span>
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Intensity <span class="val" id="litIntensityVal">0.55</span></div>
+      <input type="range" id="litIntensity" min="0" max="1" value="0.55" step="0.01">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Edge Contrast <span class="val" id="litEdgeContrastVal">0.7</span></div>
+      <input type="range" id="litEdgeContrast" min="0" max="1.5" value="0.7" step="0.05">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Ambient <span class="val" id="litAmbientVal">0.25</span></div>
+      <input type="range" id="litAmbient" min="0" max="1" value="0.25" step="0.01">
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
+    <div class="panel-title" style="margin-bottom:10px;">Colors</div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-size:10px;color:var(--muted);flex:1;font-family:var(--font-mono);">Cell Fill</span>
+      <input type="color" id="litCellColor" value="#2e1e10">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="font-size:10px;color:var(--muted);flex:1;font-family:var(--font-mono);">Edge Tint</span>
+      <input type="color" id="litEdgeTint" value="#7a4820">
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:10px 0 10px;"></div>
+    <div class="panel-title" style="margin-bottom:10px;">Accent Color</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+      <span style="font-size:10px;color:var(--muted);flex:1;font-family:var(--font-mono);">Accent Fill</span>
+      <input type="color" id="litAccentColor" value="#1a3a2a">
+    </div>
+    <div class="control-group">
+      <div class="control-label">Accent Density <span class="val" id="litAccentDensityVal">20%</span></div>
+      <input type="range" id="litAccentDensity" min="0" max="100" value="20" step="1">
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
+    <div class="panel-title" style="margin-bottom:10px;">Depth Fade</div>
+
+    <div class="control-group">
+      <div class="control-label">Opacity Min <span class="val" id="litOpacityMinVal">0.3</span></div>
+      <input type="range" id="litOpacityMin" min="0" max="1" value="0.3" step="0.05">
+    </div>
+    <div class="control-group" style="margin-bottom:0;">
+      <div class="control-label">Fade From <span class="val" id="litFadeDirVal">top</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px;">
+        <button class="tab-btn active" data-fadedir="0" style="font-size:9px;padding:4px;">TOP</button>
+        <button class="tab-btn" data-fadedir="1" style="font-size:9px;padding:4px;">BOTTOM</button>
+        <button class="tab-btn" data-fadedir="2" style="font-size:9px;padding:4px;">LEFT</button>
+        <button class="tab-btn" data-fadedir="3" style="font-size:9px;padding:4px;">RIGHT</button>
+        <button class="tab-btn" data-fadedir="4" style="font-size:9px;padding:4px;grid-column:1/-1;">NONE</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="canvas-wrap">
+      <canvas id="patternCanvas" width="600" height="600"></canvas>
+    </div>
+    <div class="status-bar">
+      <span id="statusSize">600 × 600</span>
+      <span>·</span>
+      <span id="statusElements">0 elements</span>
+      <span>·</span>
+      <span id="statusSeed">seed: —</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel">
+    <div class="panel-section">
+      <div class="panel-title">Background</div>
+      <div class="color-row" style="margin-bottom:10px;">
+        <div class="color-swatch active" style="background:#0a0a0f" data-bg="#0a0a0f"></div>
+        <div class="color-swatch" style="background:#ffffff" data-bg="#ffffff"></div>
+        <div class="color-swatch" style="background:#1a1a2e" data-bg="#1a1a2e"></div>
+        <div class="color-swatch" style="background:#f0ebe3" data-bg="#f0ebe3"></div>
+        <div class="color-swatch" style="background:#0d1b2a" data-bg="#0d1b2a"></div>
+        <div class="color-swatch" style="background:#1e3a2f" data-bg="#1e3a2f"></div>
+        <input type="color" id="bgColorInput" value="#0a0a0f" title="Custom BG">
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="color" id="bgColorPicker" value="#0a0a0f"
+          style="width:28px;height:28px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);padding:0;cursor:pointer;background:none;overflow:hidden;">
+        <input type="text" id="bgHexInput" value="#0a0a0f" maxlength="7" spellcheck="false"
+          style="flex:1;padding:7px 9px;background:var(--surface2);border:1.5px solid var(--border);
+          border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:12px;
+          outline:none;letter-spacing:0.08em;text-transform:uppercase;">
+        <button id="bgTransparentBtn" title="Transparent background"
+          onclick="toggleBgTransparent()"
+          style="width:28px;height:28px;flex-shrink:0;border-radius:5px;
+          border:1.5px solid var(--border);background:var(--surface2);
+          cursor:pointer;display:flex;align-items:center;justify-content:center;
+          transition:all 0.15s;padding:0;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="0.5" y="0.5" width="13" height="13" rx="2" stroke="var(--muted)" stroke-dasharray="2 2"/>
+            <line x1="1" y1="13" x2="13" y2="1" stroke="var(--accent3)" stroke-width="1.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Palette</div>
+      <div class="palette-multi" id="paletteColors">
+        <div class="palette-color active" style="background:#c8ff00" data-color="#c8ff00"></div>
+        <div class="palette-color" style="background:#7b61ff" data-color="#7b61ff"></div>
+        <div class="palette-color" style="background:#ff4d6d" data-color="#ff4d6d"></div>
+        <div class="palette-color" style="background:#00d4ff" data-color="#00d4ff"></div>
+        <button class="add-color-btn" id="addColorBtn" title="Add color">+</button>
+      </div>
+      <input type="color" id="colorPickerHidden" style="position:absolute;opacity:0;pointer-events:none;">
+
+      <div style="margin-top:12px;">
+        <div class="panel-title">Quick Palettes</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#c8ff00','#7b61ff','#ff4d6d','#00d4ff'])">NEON</button>
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#ff6b6b','#ffa500','#ffeb3b','#4caf50'])">VIVID</button>
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#e8d5c4','#c4a882','#8b6f47','#5c4a2a'])">EARTH</button>
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#a8edea','#fed6e3','#d299c2','#89f7fe'])">PASTEL</button>
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#ffffff','#cccccc','#888888','#333333'])">MONO</button>
+          <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#00ff88','#00cc6a','#009950'])">GREEN</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Seed & Randomize</div>
+      <div class="seed-row">
+        <input type="text" class="seed-input" id="seedInput" placeholder="seed value..." value="">
+        <button class="btn btn-ghost" onclick="randomize()">🎲</button>
+        <button class="btn btn-outline" onclick="applySeed()">↵</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Canvas Size</div>
+      <div class="size-row">
+        <input type="number" class="size-input" id="canvasW" value="600" min="100" max="4000" placeholder="W">
+        <span class="size-sep">×</span>
+        <input type="number" class="size-input" id="canvasH" value="600" min="100" max="4000" placeholder="H">
+        <button class="btn btn-ghost" onclick="applyCanvasSize()">↵</button>
+      </div>
+      <div style="display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost" style="font-size:9px;padding:4px 7px;" onclick="setSize(600,600)">600²</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:4px 7px;" onclick="setSize(800,800)">800²</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:4px 7px;" onclick="setSize(1200,600)">1200×600</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:4px 7px;" onclick="setSize(1920,1080)">1920×1080</button>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">My Presets</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <input type="text" id="presetNameInput" placeholder="Preset name…"
+          style="flex:1;padding:7px 9px;background:var(--surface2);border:1.5px solid var(--border);
+          border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:11px;outline:none;"
+          onkeydown="if(event.key==='Enter')saveUserPreset()">
+        <button class="btn btn-accent" onclick="saveUserPreset()" style="padding:7px 12px;white-space:nowrap;">+ Save</button>
+      </div>
+      <div class="preset-grid" id="userPresetGrid"></div>
+      <div id="userPresetsEmpty" style="font-size:10px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding:10px 0;">
+        No saved presets yet
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Presets</div>
+      <div class="preset-grid" id="presetGrid"></div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Animation</div>
+      <div class="toggle-row" style="margin-bottom:12px;">
+        <span class="toggle-label" style="color:var(--text);">▶ Animate Opacity</span>
+        <button class="toggle" id="animToggle"></button>
+      </div>
+      <div id="animControls" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+        <div class="control-group">
+          <div class="control-label">Speed <span class="val" id="animSpeedVal">2.0s</span></div>
+          <input type="range" id="animSpeed" min="0.2" max="8" value="2" step="0.1">
+        </div>
+        <div class="control-group">
+          <div class="control-label">Density <span class="val" id="animDensityVal">40%</span></div>
+          <input type="range" id="animDensity" min="1" max="100" value="40" step="1">
+        </div>
+        <div class="panel-title" style="margin-bottom:8px;">Easing Curve</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
+          <button class="tab-btn active" data-bezier="0.42,0,0.58,1" id="bezierEaseInOut">EASE</button>
+          <button class="tab-btn" data-bezier="0,0,1,1" id="bezierLinear">LINEAR</button>
+          <button class="tab-btn" data-bezier="0.42,0,1,1" id="bezierEaseIn">EASE IN</button>
+          <button class="tab-btn" data-bezier="0,0,0.58,1" id="bezierEaseOut">EASE OUT</button>
+          <button class="tab-btn" data-bezier="0.68,-0.55,0.27,1.55" id="bezierBounce">BOUNCE</button>
+          <button class="tab-btn" data-bezier="custom" id="bezierCustom">CUSTOM</button>
+        </div>
+        <div id="bezierCustomControls" style="display:none;margin-bottom:10px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-label">P1x <span class="val" id="bp1xVal">0.42</span></div>
+              <input type="range" id="bp1x" min="0" max="1" value="0.42" step="0.01">
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-label">P1y <span class="val" id="bp1yVal">0.00</span></div>
+              <input type="range" id="bp1y" min="-2" max="2" value="0" step="0.01">
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-label">P2x <span class="val" id="bp2xVal">0.58</span></div>
+              <input type="range" id="bp2x" min="0" max="1" value="0.58" step="0.01">
+            </div>
+            <div class="control-group" style="margin-bottom:0;">
+              <div class="control-label">P2y <span class="val" id="bp2yVal">1.00</span></div>
+              <input type="range" id="bp2y" min="-2" max="2" value="1" step="0.01">
+            </div>
+          </div>
+        </div>
+        <canvas id="bezierPreview" width="264" height="80" style="width:100%;border-radius:6px;border:1px solid var(--border);display:block;"></canvas>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <div class="panel-title">Export</div>
+      <div class="export-grid">
+        <div class="export-btn-row">
+          <span class="export-type-label">PNG</span>
+          <button class="btn btn-accent" onclick="exportPNG()" style="flex:1">↓ Export PNG</button>
+        </div>
+        <div class="export-btn-row">
+          <span class="export-type-label">SVG</span>
+          <button class="btn btn-outline" onclick="exportSVG()" style="flex:1">↓ Export SVG</button>
+        </div>
+        <div class="export-btn-row">
+          <span class="export-type-label">FIGMA</span>
+          <button class="btn btn-ghost" onclick="exportFigma()" style="flex:1">
+            <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
+              <path d="M5 7a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" fill="#1ABCFE"/>
+              <path d="M1 11a2 2 0 0 1 2-2h2v2a2 2 0 1 1-4 0z" fill="#0ACF83"/>
+              <path d="M5 1v4H3a2 2 0 0 1 0-4h2z" fill="#FF7262"/>
+              <path d="M1 3a2 2 0 0 0 2 2h2V1H3A2 2 0 0 0 1 3z" fill="#F24E1E"/>
+              <path d="M5 5h2a2 2 0 0 1 0 4H5V5z" fill="#A259FF"/>
+            </svg>
+            Copy for Figma
+          </button>
+        </div>
+        <div class="export-btn-row">
+          <span class="export-type-label" style="color:#00d4ff;">LOTTIE</span>
+          <button class="btn btn-outline" onclick="exportLottie()" style="flex:1;border-color:rgba(0,212,255,0.4);color:#00d4ff;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/>
+            </svg>
+            Export Lottie JSON
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const state = {
+  patternType: 'grid',
+  shape: 'circle',
+  spacing: 40,
+  size: 14,
+  rotation: 0,
+  opacity: 100,
+  opacityMin: 0,
+  opacityMax: 100,
+  opacityVar: 0,
+  opacityMode: 'random',
+  jitter: 0,
+  scaleVar: 0,
+  strokeOnly: false,
+  altRow: false,
+  multiColor: true,
+  sizeGradient: false,
+  cursorMagnet: false,
+  magnetRadius: 120,
+  magnetStrength: 2.5,
+  magnetPush: false,
+  magnetPushAmount: 1.0,
+  magnetFalloff: 0,
+  animEnabled: false,
+  animSpeed: 2.0,
+  animDensity: 40,
+  animBezier: [0.42, 0, 0.58, 1.0],
+  // ── Lit Hex ──
+  litCellSize: 72,
+  litGap: 5,
+  litStrokeWidth: 1.5,
+  litLightAngle: 45,
+  litIntensity: 0.55,
+  litEdgeContrast: 0.7,
+  litAmbient: 0.25,
+  litCellColor: '#2e1e10',
+  litEdgeTint: '#7a4820',
+  litOpacityMin: 0.3,
+  litFadeDir: 0,
+  litAccentColor: '#1a3a2a',
+  litAccentDensity: 20,
+  bgColor: '#0a0a0f',
+  bgTransparent: false,
+  palette: ['#c8ff00','#7b61ff','#ff4d6d','#00d4ff'],
+  seed: Math.floor(Math.random()*99999),
+  elementCount: 0,
+};
+
+let rngState = 0;
+function seededRand() {
+  rngState = (rngState * 1664525 + 1013904223) & 0xffffffff;
+  return (rngState >>> 0) / 0xffffffff;
+}
+function initRng(seed) { rngState = seed | 0; }
+
+const canvas = document.getElementById('patternCanvas');
+const ctx = canvas.getContext('2d');
+
+// ─── DRAW ─────────────────────────────────────────────────────────────────────
+function drawShape(x, y, size, color, rotation, alphaOverride, elementIndex, nowMs) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation * Math.PI / 180);
+  let a = (alphaOverride !== undefined ? alphaOverride : state.opacity / 100);
+  if (elementIndex !== undefined && nowMs !== undefined) a *= getAnimAlpha(elementIndex, nowMs);
+  ctx.globalAlpha = Math.max(0, Math.min(1, a));
+
+  if (state.strokeOnly) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, size * 0.12);
+    ctx.fillStyle = 'transparent';
+  } else {
+    ctx.fillStyle = color;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1, size * 0.08);
+  }
+
+  const s = size;
+  ctx.beginPath();
+
+  switch (state.shape) {
+    case 'circle':
+      ctx.arc(0, 0, s/2, 0, Math.PI*2);
+      break;
+    case 'square':
+      ctx.rect(-s/2, -s/2, s, s);
+      break;
+    case 'diamond':
+      ctx.moveTo(0, -s/2); ctx.lineTo(s/2, 0);
+      ctx.lineTo(0, s/2); ctx.lineTo(-s/2, 0);
+      ctx.closePath(); break;
+    case 'triangle':
+      ctx.moveTo(0, -s/2);
+      ctx.lineTo(s/2, s/2);
+      ctx.lineTo(-s/2, s/2);
+      ctx.closePath(); break;
+    case 'cross':
+      ctx.rect(-s/6, -s/2, s/3, s);
+      ctx.rect(-s/2, -s/6, s, s/3);
+      break;
+    case 'star':
+      for (let i=0;i<5;i++) {
+        const a = (i*72 - 90)*Math.PI/180;
+        const b = (i*72 - 90 + 36)*Math.PI/180;
+        if (i===0) ctx.moveTo(Math.cos(a)*s/2, Math.sin(a)*s/2);
+        else ctx.lineTo(Math.cos(a)*s/2, Math.sin(a)*s/2);
+        ctx.lineTo(Math.cos(b)*s/4, Math.sin(b)*s/4);
+      }
+      ctx.closePath(); break;
+    case 'hexagon':
+      for (let i=0;i<6;i++) {
+        const a = (i*60)*Math.PI/180;
+        if (i===0) ctx.moveTo(Math.cos(a)*s/2, Math.sin(a)*s/2);
+        else ctx.lineTo(Math.cos(a)*s/2, Math.sin(a)*s/2);
+      }
+      ctx.closePath(); break;
+    case 'ring':
+      ctx.arc(0, 0, s/2, 0, Math.PI*2);
+      ctx.moveTo(s/3.5, 0);
+      ctx.arc(0, 0, s/3.5, 0, Math.PI*2, true);
+      break;
+    case 'line':
+      ctx.lineWidth = Math.max(1.5, s*0.15);
+      ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.restore(); return;
+    case 'dot':
+      ctx.arc(0, 0, Math.max(1, s/5), 0, Math.PI*2);
+      break;
+    case 'wave':
+      ctx.lineWidth = Math.max(1.5, s*0.1);
+      ctx.moveTo(-s/2, 0);
+      ctx.bezierCurveTo(-s/4, -s/3, s/4, s/3, s/2, 0);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.restore(); return;
+    case 'arrow':
+      ctx.lineWidth = Math.max(1.5, s*0.1);
+      ctx.moveTo(-s/2, 0); ctx.lineTo(s/2, 0);
+      ctx.moveTo(s/6, -s/3); ctx.lineTo(s/2, 0); ctx.lineTo(s/6, s/3);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.restore(); return;
+  }
+
+  if (state.strokeOnly) {
+    ctx.stroke();
+    if (state.shape === 'ring') { ctx.fill(); ctx.stroke(); }
+  } else {
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function getColor(index) {
+  if (!state.multiColor) return state.palette[0] || '#c8ff00';
+  return state.palette[index % state.palette.length];
+}
+
+function getElementOpacity(x, y, randVal) {
+  const baseMax = state.opacity / 100;
+  if (state.opacityVar === 0) return baseMax;
+
+  // opacityMin/Max define the absolute range [0..1]
+  // opacityVar (1-100) scales how much of that range is actually applied
+  const minO = state.opacityMin / 100;
+  const maxO = Math.min(baseMax, state.opacityMax / 100);
+  const strength = state.opacityVar / 100;
+  const W = canvas.width, H = canvas.height;
+
+  // effectiveMin: at full strength → minO; at zero strength → maxO (no variation)
+  const effectiveMin = maxO - (maxO - minO) * strength;
+
+  function lerp(t) {
+    // t=0 → effectiveMin, t=1 → maxO
+    // Use t directly — LCG rand is uniform so elements can genuinely reach effectiveMin
+    return effectiveMin + t * (maxO - effectiveMin);
+  }
+
+  switch (state.opacityMode) {
+    case 'random':
+      return lerp(randVal);
+    case 'radial': {
+      const cx = W/2, cy = H/2;
+      const dist = Math.sqrt((x-cx)**2 + (y-cy)**2);
+      const maxDist = Math.sqrt(cx**2+cy**2);
+      return lerp(1 - dist / maxDist); // bright center, dim edges
+    }
+    case 'radialOut': {
+      const cx = W/2, cy = H/2;
+      const dist = Math.sqrt((x-cx)**2 + (y-cy)**2);
+      const maxDist = Math.sqrt(cx**2+cy**2);
+      return lerp(dist / maxDist); // dim center, bright edges
+    }
+    case 'fadeY':
+      return lerp(1 - y / H); // bright top, dim bottom
+    case 'fadeX':
+      return lerp(1 - x / W); // bright left, dim right
+    case 'noise': {
+      const n = (Math.sin(x * 0.05) * Math.cos(y * 0.05) + 1) / 2;
+      return lerp(n * 0.5 + randVal * 0.5);
+    }
+    default:
+      return baseMax;
+  }
+}
+
+function getVariedSize(baseSize, x, y, index) {
+  let s = baseSize;
+  if (state.scaleVar > 0) {
+    const v = seededRand() * (state.scaleVar/100) * baseSize;
+    s = baseSize * 0.5 + v + baseSize * 0.5 * (1 - state.scaleVar/100);
+  }
+  if (state.sizeGradient) {
+    const cx = canvas.width/2, cy = canvas.height/2;
+    const dist = Math.sqrt((x-cx)**2 + (y-cy)**2);
+    const maxDist = Math.sqrt(cx**2+cy**2);
+    s = baseSize * (1 - dist/maxDist * 0.7);
+  }
+  return Math.max(1, s);
+}
+
+// ─── LIT HEX ─────────────────────────────────────────────────────────────────
+function lhHexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)];
+}
+function lhRgbToHex(r,g,b) {
+  return '#'+[r,g,b].map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+}
+function lhLerpColor(h1,h2,t) {
+  const [r1,g1,b1]=lhHexToRgb(h1),[r2,g2,b2]=lhHexToRgb(h2);
+  return lhRgbToHex(r1+(r2-r1)*t,g1+(g2-g1)*t,b1+(b2-b1)*t);
+}
+function lhLighten(hex,amt) {
+  const [r,g,b]=lhHexToRgb(hex);
+  return lhRgbToHex(r+amt*255,g+amt*255,b+amt*255);
+}
+function lhBlend(hex,tint,t) {
+  const [r1,g1,b1]=lhHexToRgb(hex),[r2,g2,b2]=lhHexToRgb(tint);
+  return lhRgbToHex(r1*(1-t)+r2*t,g1*(1-t)+g2*t,b1*(1-t)+b2*t);
+}
+function lhHexVerts(cx,cy,radius) {
+  const v=[];
+  for(let i=0;i<6;i++){const a=i*60*Math.PI/180;v.push([cx+radius*Math.cos(a),cy+radius*Math.sin(a)]);}
+  return v;
+}
+function lhEdgeBrightness(v1,v2) {
+  const ex=v2[0]-v1[0],ey=v2[1]-v1[1];
+  const nx=-ey,ny=ex,len=Math.sqrt(nx*nx+ny*ny);
+  if(len===0)return state.litAmbient;
+  const nxn=nx/len,nyn=ny/len;
+  const la=state.litLightAngle*Math.PI/180;
+  const dot=nxn*Math.cos(la)+nyn*Math.sin(la);
+  return state.litAmbient+(dot+1)/2*state.litIntensity;
+}
+function lhCellOpacity(cx,cy,W,H) {
+  if(state.litFadeDir===4) return 1;
+  let t;
+  switch(state.litFadeDir){
+    case 0: t=1-cy/H; break;
+    case 1: t=cy/H; break;
+    case 2: t=1-cx/W; break;
+    case 3: t=cx/W; break;
+    default: return 1;
+  }
+  t=Math.max(0,Math.min(1,t));
+  return state.litOpacityMin+(1-state.litOpacityMin)*(1-t*0.75);
+}
+
+function drawLitHex(nowMs) {
+  const W=canvas.width, H=canvas.height;
+
+  // Background — solid fill, no vignette
+  if (!state.bgTransparent) {
+    ctx.fillStyle = state.bgColor;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  const r = state.litCellSize / 2;
+  // At gap=0 hexagons touch edge-to-edge. gap adds pixel distance between edges.
+  // For this vertex layout (pointy sides, flat top/bottom):
+  //   touching colSpacing = r * 1.5
+  //   touching rowSpacing = r * sqrt(3)
+  // Each +1 gap unit pushes centers apart proportionally in both axes.
+  const gapOffset = state.litGap;
+  const colSpacing = r * 1.5 + gapOffset;
+  const rowSpacing = r * Math.sqrt(3) + gapOffset;
+  const cols=Math.ceil(W/colSpacing)+2;
+  const rows=Math.ceil(H/rowSpacing)+2;
+
+  let count=0;
+  // Use a stable element index for animation that matches getAnimAlpha
+  let elemIdx=0;
+
+  for(let col=-1;col<cols;col++){
+    for(let row=-1;row<rows;row++){
+      const cx=col*colSpacing;
+      const cy=row*rowSpacing+(col%2===0?0:rowSpacing/2);
+      if(cx<-state.litCellSize||cx>W+state.litCellSize)continue;
+      if(cy<-state.litCellSize||cy>H+state.litCellSize)continue;
+
+      const verts=lhHexVerts(cx,cy,r);
+      let opacity=lhCellOpacity(cx,cy,W,H);
+
+      // Apply animation opacity multiplier if animation is on
+      const animMult=getAnimAlpha(elemIdx,nowMs);
+      opacity*=animMult;
+
+      // Cursor magnet scale
+      const magMult=getCursorSizeMultiplier(cx,cy);
+
+      const distFromCenter=Math.sqrt((cx-W*0.5)**2+(cy-H*0.5)**2);
+      const fillT=Math.min(1,distFromCenter/(W*0.6));
+
+      // Deterministically decide if this cell is an accent cell
+      const isAccent = state.litAccentDensity > 0 &&
+        (elemHash(elemIdx + state.seed * 13) % 100) < state.litAccentDensity;
+
+      const baseFill  = isAccent ? state.litAccentColor : state.litCellColor;
+      const baseEdge  = isAccent ? lhLighten(state.litAccentColor, 0.05) : state.litEdgeTint;
+      const fillColor = lhLerpColor(lhLighten(baseFill, 0.04), baseFill, fillT);
+
+      ctx.save();
+      // Apply cursor magnet scale from cell center
+      if(magMult!==1){
+        ctx.translate(cx,cy);
+        ctx.scale(magMult,magMult);
+        ctx.translate(-cx,-cy);
+      }
+      ctx.globalAlpha=Math.max(0,opacity);
+
+      // Cell fill
+      ctx.beginPath();
+      ctx.moveTo(verts[0][0],verts[0][1]);
+      for(let v=1;v<6;v++) ctx.lineTo(verts[v][0],verts[v][1]);
+      ctx.closePath();
+      ctx.fillStyle=fillColor;
+      ctx.fill();
+
+      // Per-edge lit strokes
+      for(let e=0;e<6;e++){
+        const v1=verts[e],v2=verts[(e+1)%6];
+        const b=Math.max(0,Math.min(1.5,lhEdgeBrightness(v1,v2)));
+        const edgeColor=lhBlend(
+          lhLighten(baseFill,(b-0.5)*state.litEdgeContrast*0.15),
+          baseEdge,
+          Math.max(0,b-0.5)*state.litEdgeContrast*0.6
+        );
+        ctx.beginPath();
+        ctx.moveTo(v1[0],v1[1]);
+        ctx.lineTo(v2[0],v2[1]);
+        ctx.strokeStyle=edgeColor;
+        ctx.lineWidth=state.litStrokeWidth;
+        ctx.globalAlpha=Math.max(0,opacity*Math.min(1,b*0.9+0.1));
+        ctx.stroke();
+      }
+
+      ctx.restore();
+      elemIdx++; count++;
+    }
+  }
+  return count;
+}
+
+// ─── CURSOR MAGNET ───────────────────────────────────────────────────────────
+let cursorPos = { x: -9999, y: -9999 };
+let rafId = null;
+
+function getCursorSizeMultiplier(x, y) {
+  if (!state.cursorMagnet) return 1;
+  const dx = x - cursorPos.x;
+  const dy = y - cursorPos.y;
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  if (dist >= state.magnetRadius) return state.magnetFalloff > 0 ? 0 : 1;
+
+  const t = 1 - dist / state.magnetRadius; // 0 at edge → 1 at cursor
+  const ease = t * t * (3 - 2 * t);        // smoothstep
+
+  const sp = state.spacing;
+  const isCentral = dist < sp * 0.5;
+
+  let multiplier;
+  if (isCentral) {
+    multiplier = 1 + (state.magnetStrength - 1) * ease;
+  } else {
+    const shrinkStrength = state.magnetPush ? state.magnetPushAmount : 1.0;
+    const neighbourT = 1 - (dist - sp * 0.5) / (state.magnetRadius - sp * 0.5);
+    const neighbourEase = Math.max(0, neighbourT) * Math.max(0, neighbourT) * (3 - 2 * Math.max(0, neighbourT));
+    const shrink = 1 - neighbourEase * ease * 0.55 * shrinkStrength;
+    multiplier = Math.max(0.05, shrink);
+  }
+
+  // Distance falloff: pieces shrink toward 0 as they approach the radius edge.
+  // t=1 at cursor center → no falloff reduction; t=0 at edge → full falloff reduction.
+  if (state.magnetFalloff > 0) {
+    // falloff reduces size linearly with distance; at edge → size * (1 - falloff)
+    // We apply it to ALL pieces including the central one for a smooth dome shape.
+    const falloffScale = 1 - state.magnetFalloff * (1 - t);
+    multiplier *= Math.max(0, falloffScale);
+  }
+
+  return Math.max(0, multiplier);
+}
+
+// Push offset no longer needed — spacing is maintained by shrinking neighbours
+function getCursorPushOffset(x, y) {
+  return { ox: 0, oy: 0 };
+}
+
+// ─── ANIMATION ENGINE ────────────────────────────────────────────────────────
+
+// Fast deterministic hash for element index (independent of seeded RNG)
+function elemHash(index) {
+  let h = (index ^ 0xdeadbeef) >>> 0;
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  h = Math.imul(h ^ (h >>> 16), 0x45d9f3b);
+  return (h ^ (h >>> 16)) >>> 0;
+}
+
+// Cubic bezier solver — finds y at given x using Newton's method
+function cubicBezier(p1x, p1y, p2x, p2y) {
+  return function(t) {
+    // Coefficients
+    const cx = 3 * p1x;
+    const bx = 3 * (p2x - p1x) - cx;
+    const ax = 1 - cx - bx;
+    const cy = 3 * p1y;
+    const by = 3 * (p2y - p1y) - cy;
+    const ay = 1 - cy - by;
+
+    function sampleX(t) { return ((ax * t + bx) * t + cx) * t; }
+    function sampleY(t) { return ((ay * t + by) * t + cy) * t; }
+    function dSampleX(t) { return (3 * ax * t + 2 * bx) * t + cx; }
+
+    // Solve for t given x using Newton's method
+    let tSolve = t;
+    for (let i = 0; i < 8; i++) {
+      const x = sampleX(tSolve) - t;
+      const d = dSampleX(tSolve);
+      if (Math.abs(d) < 1e-6) break;
+      tSolve -= x / d;
+    }
+    return sampleY(Math.max(0, Math.min(1, tSolve)));
+  };
+}
+
+// Returns animation opacity multiplier (0..1) for element at index, given current time
+function getAnimAlpha(index, nowMs) {
+  if (!state.animEnabled) return 1;
+
+  const h = elemHash(index + state.seed * 7);
+  // Decide if this element participates based on density
+  if ((h % 100) >= state.animDensity) return 1;
+
+  // Each element gets a unique phase offset and a slightly varied period
+  const phaseOffset = (elemHash(index * 3 + 1) % 1000) / 1000; // 0..1
+  const periodVariance = 0.6 + (elemHash(index * 7 + 3) % 1000) / 1000 * 0.8; // 0.6..1.4×
+  const period = state.animSpeed * 1000 * periodVariance; // ms
+
+  // t goes 0→1→0 in one period (triangle wave)
+  const raw = ((nowMs / period + phaseOffset) % 1);
+  const triangle = raw < 0.5 ? raw * 2 : (1 - raw) * 2; // 0→1→0
+
+  // Apply bezier easing to the triangle wave
+  const [p1x, p1y, p2x, p2y] = state.animBezier;
+  const eased = cubicBezier(p1x, p1y, p2x, p2y)(triangle);
+
+  // Opacity: goes from 1 down to 0 and back
+  return 1 - eased;
+}
+
+// ─── UNIFIED RENDER LOOP ─────────────────────────────────────────────────────
+// Single RAF loop handles both animation timing and cursor magnet redraws.
+// animStartTime tracks elapsed ms for getAnimAlpha.
+// The loop runs whenever animation OR cursor magnet is active.
+
+let animRafId = null;
+let animStartTime = null;
+let animElapsedMs = 0; // accumulated ms, paused when loop stops
+
+function needsLoop() {
+  return state.animEnabled || state.cursorMagnet;
+}
+
+function startRenderLoop() {
+  if (animRafId) return; // already running
+  let lastTs = null;
+  function frame(ts) {
+    if (!needsLoop()) {
+      animRafId = null;
+      drawPattern(animElapsedMs);
+      return;
+    }
+    if (lastTs === null) lastTs = ts;
+    if (state.animEnabled) animElapsedMs += ts - lastTs;
+    lastTs = ts;
+    drawPattern(animElapsedMs);
+    animRafId = requestAnimationFrame(frame);
+  }
+  animRafId = requestAnimationFrame(frame);
+}
+
+function stopRenderLoop() {
+  if (animRafId) { cancelAnimationFrame(animRafId); animRafId = null; }
+  drawPattern(animElapsedMs);
+}
+
+function startAnimLoop() { startRenderLoop(); }
+
+function stopAnimLoop() {
+  if (!state.cursorMagnet) stopRenderLoop();
+  else drawPattern(animElapsedMs); // magnet still active, just redraw statically
+}
+
+function drawPattern(nowMs = 0) {
+  initRng(state.seed);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // background
+  if (!state.bgTransparent) {
+    ctx.fillStyle = state.bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  const W = canvas.width, H = canvas.height;
+  const sp = state.spacing;
+  let count = 0;
+
+  switch (state.patternType) {
+    case 'grid': {
+      let i = 0;
+      for (let y = sp/2; y < H + sp; y += sp) {
+        for (let x = sp/2; x < W + sp; x += sp) {
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const r = state.rotation;
+          const opR = seededRand();
+          const alpha = getElementOpacity(x, y, opR);
+          drawShape(px + ox, py + oy, s, getColor(i), r, alpha, i, nowMs);
+          i++; count++;
+        }
+      }
+      break;
+    }
+    case 'hex': {
+      let row = 0, i = 0;
+      for (let y = sp*0.6; y < H + sp; y += sp*0.87) {
+        const offset = (row%2) * sp/2;
+        for (let x = offset + sp/2; x < W + sp; x += sp) {
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const alpha = getElementOpacity(x, y, seededRand());
+          drawShape(px + ox, py + oy, s, getColor(i), state.rotation, alpha, i, nowMs);
+          i++; count++;
+        }
+        row++;
+      }
+      break;
+    }
+    case 'brick': {
+      let row = 0, i = 0;
+      for (let y = sp/2; y < H + sp; y += sp) {
+        const offset = (row%2) * sp/2;
+        for (let x = offset + sp/2; x < W + sp; x += sp) {
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const alpha = getElementOpacity(x, y, seededRand());
+          drawShape(px + ox, py + oy, s, getColor(i), state.rotation + (state.altRow && row%2 ? 45 : 0), alpha, i, nowMs);
+          i++; count++;
+        }
+        row++;
+      }
+      break;
+    }
+    case 'diagonal': {
+      let i = 0;
+      for (let y = -sp; y < H + sp*2; y += sp) {
+        for (let x = -sp; x < W + sp*2; x += sp) {
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const alpha = getElementOpacity(x, y, seededRand());
+          ctx.save();
+          ctx.translate(canvas.width/2, canvas.height/2);
+          ctx.rotate(Math.PI/4);
+          ctx.translate(-canvas.width/2, -canvas.height/2);
+          drawShape(px + ox, py + oy, s, getColor(i), state.rotation, alpha, i, nowMs);
+          ctx.restore();
+          i++; count++;
+        }
+      }
+      break;
+    }
+    case 'radial': {
+      const rings = Math.ceil(Math.max(W,H) / sp) + 1;
+      let i = 0;
+      for (let r = 0; r <= rings; r++) {
+        const radius = r * sp;
+        const circumference = 2 * Math.PI * radius;
+        const numItems = r === 0 ? 1 : Math.max(6, Math.floor(circumference / sp));
+        for (let j = 0; j < numItems; j++) {
+          const angle = (j / numItems) * Math.PI * 2 + (state.rotation * Math.PI / 180);
+          const x = W/2 + Math.cos(angle) * radius;
+          const y = H/2 + Math.sin(angle) * radius;
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const alpha = getElementOpacity(x, y, seededRand());
+          drawShape(px + ox, py + oy, s, getColor(i), state.rotation + (angle * 180/Math.PI), alpha, i, nowMs);
+          i++; count++;
+        }
+      }
+      break;
+    }
+    case 'wave': {
+      let i = 0;
+      for (let y = sp; y < H + sp; y += sp) {
+        for (let x = 0; x < W + sp; x += sp) {
+          const wave = Math.sin((x / W) * Math.PI * 4 + (y/H)*Math.PI*2) * sp * 0.4;
+          const jx = (seededRand()-0.5) * state.jitter * 2;
+          const jy = (seededRand()-0.5) * state.jitter * 2;
+          const px = x + jx, py = y + wave + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y+wave, i) * getCursorSizeMultiplier(px, py);
+          const rot = state.rotation + Math.cos((x/W)*Math.PI*4) * 30;
+          const alpha = getElementOpacity(x, y+wave, seededRand());
+          drawShape(px + ox, py + oy, s, getColor(i), rot, alpha, i, nowMs);
+          i++; count++;
+        }
+      }
+      break;
+    }
+    case 'scatter': {
+      const num = Math.floor((W * H) / (sp * sp * 0.5));
+      for (let i = 0; i < num; i++) {
+        const x = seededRand() * W;
+        const y = seededRand() * H;
+        const { ox, oy } = getCursorPushOffset(x, y);
+        const s = getVariedSize(state.size * (0.4 + seededRand()*0.8), x, y, i) * getCursorSizeMultiplier(x, y);
+        const r = seededRand() * 360;
+        const alpha = getElementOpacity(x, y, seededRand());
+        drawShape(x + ox, y + oy, s, getColor(i), state.rotation + r, alpha, i, nowMs);
+        count++;
+      }
+      break;
+    }
+    case 'triangles': {
+      let row = 0, i = 0;
+      const th = sp * 0.866;
+      for (let y = 0; y < H + th; y += th) {
+        for (let x = (row%2)*sp/2; x < W + sp; x += sp/2) {
+          const jx = (seededRand()-0.5)*state.jitter*2;
+          const jy = (seededRand()-0.5)*state.jitter*2;
+          const px = x + jx, py = y + jy;
+          const { ox, oy } = getCursorPushOffset(px, py);
+          const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
+          const flip = (i%2===0) ? 0 : 180;
+          const alpha = getElementOpacity(x, y, seededRand());
+          drawShape(px + ox, py + oy, s, getColor(i), state.rotation+flip, alpha, i, nowMs);
+          i++; count++;
+        }
+        row++;
+      }
+      break;
+    }
+    case 'lithex': {
+      count = drawLitHex(nowMs);
+      break;
+    }
+  }
+  document.getElementById('statusElements').textContent = count + ' elements';
+  document.getElementById('statusSeed').textContent = 'seed: ' + state.seed;
+  document.getElementById('statusSize').textContent = canvas.width + ' × ' + canvas.height;
+}
+
+// ─── CONTROLS ─────────────────────────────────────────────────────────────────
+function bindRange(id, key, suffix='', factor=1) {
+  const el = document.getElementById(id);
+  const val = document.getElementById(id+'Val');
+  el.addEventListener('input', () => {
+    state[key] = parseFloat(el.value) * factor;
+    val.textContent = el.value + suffix;
+    drawPattern(animElapsedMs);
+  });
+}
+bindRange('spacing','spacing');
+bindRange('size','size');
+bindRange('rotation','rotation','°');
+bindRange('opacity','opacity','%');
+bindRange('jitter','jitter');
+bindRange('scaleVar','scaleVar','%');
+
+// Opacity variance
+const opacityVarEl = document.getElementById('opacityVar');
+const opacityVarVal = document.getElementById('opacityVarVal');
+const opRangeGroup = document.getElementById('opacityRangeGroup');
+const opMaxGroup = document.getElementById('opacityMaxGroup');
+const opModeGroup = document.getElementById('opacityModeGroup');
+
+function updateOpacityVarUI() {
+  const on = state.opacityVar > 0;
+  [opRangeGroup, opMaxGroup, opModeGroup].forEach(g => {
+    g.style.opacity = on ? '1' : '0.35';
+    g.style.pointerEvents = on ? 'auto' : 'none';
+  });
+  opacityVarVal.textContent = state.opacityVar === 0 ? 'OFF' : state.opacityVar + '%';
+}
+
+opacityVarEl.addEventListener('input', () => {
+  state.opacityVar = parseInt(opacityVarEl.value);
+  updateOpacityVarUI();
+  drawPattern(animElapsedMs);
+});
+
+const opMinEl = document.getElementById('opacityMin');
+const opMinVal = document.getElementById('opacityMinVal');
+opMinEl.addEventListener('input', () => {
+  state.opacityMin = parseInt(opMinEl.value);
+  opMinVal.textContent = state.opacityMin + '%';
+  drawPattern(animElapsedMs);
+});
+
+const opMaxEl = document.getElementById('opacityMax');
+const opMaxValEl = document.getElementById('opacityMaxVal');
+opMaxEl.addEventListener('input', () => {
+  state.opacityMax = parseInt(opMaxEl.value);
+  opMaxValEl.textContent = state.opacityMax + '%';
+  drawPattern(animElapsedMs);
+});
+
+document.querySelectorAll('[data-omode]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-omode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.opacityMode = btn.dataset.omode;
+    drawPattern(animElapsedMs);
+  });
+});
+
+document.querySelectorAll('[data-type]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.patternType = btn.dataset.type;
+    drawPattern(animElapsedMs);
+  });
+});
+
+document.querySelectorAll('.shape-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.shape = btn.dataset.shape;
+    drawPattern(animElapsedMs);
+  });
+});
+
+function bindToggle(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('click', () => {
+    state[key] = !state[key];
+    el.classList.toggle('on', state[key]);
+    drawPattern(animElapsedMs);
+  });
+  el.classList.toggle('on', state[key]);
+}
+bindToggle('strokeToggle','strokeOnly');
+bindToggle('altRowToggle','altRow');
+bindToggle('multiColorToggle','multiColor');
+bindToggle('gradientToggle','sizeGradient');
+
+// ─── LIT HEX CONTROLS ────────────────────────────────────────────────────────
+const litHexPanel = document.getElementById('litHexPanel');
+
+function showHideLitHexPanel() {
+  const isLit = state.patternType === 'lithex';
+  litHexPanel.style.display = isLit ? 'block' : 'none';
+}
+
+// Bind lit hex sliders
+function bindLit(id, key, suffix='') {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + 'Val');
+  el.addEventListener('input', () => {
+    state[key] = parseFloat(el.value);
+    if (valEl) valEl.textContent = el.value + suffix;
+    drawPattern(animElapsedMs);
+  });
+}
+bindLit('litCellSize',    'litCellSize',    '');
+bindLit('litGap',         'litGap',         '');
+bindLit('litStrokeWidth', 'litStrokeWidth', '');
+bindLit('litIntensity',   'litIntensity',   '');
+bindLit('litEdgeContrast','litEdgeContrast','');
+bindLit('litAmbient',     'litAmbient',     '');
+bindLit('litOpacityMin',  'litOpacityMin',  '');
+
+['litCellColor','litEdgeTint','litAccentColor'].forEach(id => {
+  document.getElementById(id).addEventListener('input', e => {
+    state[id] = e.target.value;
+    drawPattern(animElapsedMs);
+  });
+});
+
+document.getElementById('litAccentDensity').addEventListener('input', e => {
+  state.litAccentDensity = parseInt(e.target.value);
+  document.getElementById('litAccentDensityVal').textContent = e.target.value + '%';
+  drawPattern(animElapsedMs);
+});
+
+// Fade direction buttons
+document.querySelectorAll('[data-fadedir]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-fadedir]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.litFadeDir = parseInt(btn.dataset.fadedir);
+    const labels = ['top','bottom','left','right','none'];
+    document.getElementById('litFadeDirVal').textContent = labels[state.litFadeDir];
+    drawPattern(animElapsedMs);
+  });
+});
+
+// Light direction wheel
+const litWheel = document.getElementById('litDirWheel');
+const litArrow = document.getElementById('litDirArrow');
+
+function updateLitArrow(angle) {
+  litArrow.style.transform = `rotate(${angle}deg)`;
+  document.getElementById('litAngleDeg').textContent = Math.round(((angle % 360) + 360) % 360) + '°';
+}
+
+let litDragging = false;
+litWheel.addEventListener('mousedown', e => { litDragging = true; handleLitWheel(e); e.preventDefault(); });
+window.addEventListener('mousemove', e => { if (litDragging) handleLitWheel(e); });
+window.addEventListener('mouseup', () => { litDragging = false; });
+
+function handleLitWheel(e) {
+  const rect = litWheel.getBoundingClientRect();
+  const angle = Math.atan2(e.clientY - (rect.top + rect.height/2), e.clientX - (rect.left + rect.width/2)) * 180 / Math.PI;
+  state.litLightAngle = angle;
+  updateLitArrow(angle);
+  drawPattern(animElapsedMs);
+}
+updateLitArrow(state.litLightAngle);
+
+// Hook into pattern type switching to show/hide panel
+document.querySelectorAll('[data-type]').forEach(btn => {
+  btn.addEventListener('click', showHideLitHexPanel);
+});
+
+// Cursor Magnet
+const magnetControls = document.getElementById('magnetControls');
+document.getElementById('magnetToggle').addEventListener('click', function() {
+  state.cursorMagnet = !state.cursorMagnet;
+  this.classList.toggle('on', state.cursorMagnet);
+  magnetControls.style.opacity = state.cursorMagnet ? '1' : '0.35';
+  magnetControls.style.pointerEvents = state.cursorMagnet ? 'auto' : 'none';
+  canvas.style.cursor = state.cursorMagnet ? 'none' : 'crosshair';
+  if (state.cursorMagnet) {
+    startRenderLoop(); // start unified loop (also handles animation if enabled)
+  } else {
+    cursorPos = { x: -9999, y: -9999 };
+    if (!state.animEnabled) stopRenderLoop();
+    else drawPattern(animElapsedMs);
+  }
+});
+
+const magnetRadiusEl = document.getElementById('magnetRadius');
+const magnetRadiusVal = document.getElementById('magnetRadiusVal');
+magnetRadiusEl.addEventListener('input', () => {
+  state.magnetRadius = parseInt(magnetRadiusEl.value);
+  magnetRadiusVal.textContent = state.magnetRadius;
+});
+
+const magnetStrengthEl = document.getElementById('magnetStrength');
+const magnetStrengthVal = document.getElementById('magnetStrengthVal');
+magnetStrengthEl.addEventListener('input', () => {
+  state.magnetStrength = parseFloat(magnetStrengthEl.value);
+  magnetStrengthVal.textContent = state.magnetStrength.toFixed(1) + '×';
+});
+
+const magnetPushAmountGroup = document.getElementById('magnetPushAmountGroup');
+document.getElementById('magnetPushToggle').addEventListener('click', function() {
+  state.magnetPush = !state.magnetPush;
+  this.classList.toggle('on', state.magnetPush);
+  magnetPushAmountGroup.style.opacity = state.magnetPush ? '1' : '0.35';
+  magnetPushAmountGroup.style.pointerEvents = state.magnetPush ? 'auto' : 'none';
+});
+
+const magnetPushAmountEl = document.getElementById('magnetPushAmount');
+const magnetPushAmountVal = document.getElementById('magnetPushAmountVal');
+magnetPushAmountEl.addEventListener('input', () => {
+  state.magnetPushAmount = parseFloat(magnetPushAmountEl.value);
+  magnetPushAmountVal.textContent = state.magnetPushAmount.toFixed(1) + '×';
+});
+
+const magnetFalloffEl = document.getElementById('magnetFalloff');
+const magnetFalloffVal = document.getElementById('magnetFalloffVal');
+magnetFalloffEl.addEventListener('input', () => {
+  state.magnetFalloff = parseInt(magnetFalloffEl.value) / 100;
+  magnetFalloffVal.textContent = magnetFalloffEl.value + '%';
+});
+
+// Cursor tracking — position updates only; unified loop handles redraws
+let magnetDirty = false;
+canvas.addEventListener('mousemove', e => {
+  if (!state.cursorMagnet) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  cursorPos.x = (e.clientX - rect.left) * scaleX;
+  cursorPos.y = (e.clientY - rect.top) * scaleY;
+  // If animation loop is already running it picks up new cursorPos automatically.
+  // If only magnet is active (no animation), trigger a single redraw per frame.
+  if (!state.animEnabled && !magnetDirty) {
+    magnetDirty = true;
+    rafId = requestAnimationFrame(() => {
+      drawPattern(animElapsedMs);
+      magnetDirty = false;
+    });
+  }
+});
+
+canvas.addEventListener('mouseleave', () => {
+  if (!state.cursorMagnet) return;
+  cursorPos = { x: -9999, y: -9999 };
+  if (!state.animEnabled) {
+    requestAnimationFrame(() => { drawPattern(animElapsedMs); magnetDirty = false; });
+  }
+});
+
+// BG color — sync swatches, color picker, and hex text input
+function applyBgColor(hex, source) {
+  // Validate hex — must be #rrggbb
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  state.bgColor = hex;
+  if (source !== 'swatch') document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if (source !== 'picker') { document.getElementById('bgColorPicker').value = hex; document.getElementById('bgColorInput').value = hex; }
+  if (source !== 'text') document.getElementById('bgHexInput').value = hex.toUpperCase();
+  drawPattern(animElapsedMs);
+}
+
+function toggleBgTransparent() {
+  state.bgTransparent = !state.bgTransparent;
+  const btn = document.getElementById('bgTransparentBtn');
+  const colorRow = document.querySelector('.color-row');
+  const hexRow = btn.closest('div');
+  const canvasWrap = document.querySelector('.canvas-wrap');
+
+  // Visual feedback on the button
+  btn.style.borderColor = state.bgTransparent ? 'var(--accent3)' : 'var(--border)';
+  btn.style.background = state.bgTransparent ? 'rgba(255,77,109,0.12)' : 'var(--surface2)';
+
+  // Dim the color controls when transparent
+  const opacity = state.bgTransparent ? '0.35' : '1';
+  const pointer = state.bgTransparent ? 'none' : 'auto';
+  colorRow.style.opacity = opacity;
+  colorRow.style.pointerEvents = pointer;
+  document.getElementById('bgColorPicker').style.pointerEvents = pointer;
+  document.getElementById('bgColorPicker').style.opacity = opacity;
+  document.getElementById('bgHexInput').style.opacity = opacity;
+  document.getElementById('bgHexInput').style.pointerEvents = pointer;
+
+  // Checkerboard on canvas wrap
+  if (canvasWrap) canvasWrap.classList.toggle('transparent-bg', state.bgTransparent);
+
+  drawPattern(animElapsedMs);
+}
+window.toggleBgTransparent = toggleBgTransparent;
+
+document.querySelectorAll('.color-swatch').forEach(sw => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+    sw.classList.add('active');
+    applyBgColor(sw.dataset.bg, 'swatch');
+  });
+});
+
+document.getElementById('bgColorPicker').addEventListener('input', e => {
+  applyBgColor(e.target.value, 'picker');
+});
+
+// Keep legacy bgColorInput in sync too (used by swatches)
+document.getElementById('bgColorInput').addEventListener('input', e => {
+  applyBgColor(e.target.value, 'picker');
+});
+
+const bgHexInput = document.getElementById('bgHexInput');
+bgHexInput.addEventListener('input', e => {
+  let v = e.target.value.trim();
+  if (!v.startsWith('#')) v = '#' + v;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) applyBgColor(v, 'text');
+});
+bgHexInput.addEventListener('blur', e => {
+  // On blur, normalise display value to current color
+  document.getElementById('bgHexInput').value = state.bgColor.toUpperCase();
+});
+bgHexInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') bgHexInput.blur();
+});
+
+// Palette
+function renderPalette() {
+  const container = document.getElementById('paletteColors');
+  const addBtn = document.getElementById('addColorBtn');
+  // remove old swatches
+  container.querySelectorAll('.palette-color').forEach(el => el.remove());
+  state.palette.forEach((color, i) => {
+    const div = document.createElement('div');
+    div.className = 'palette-color' + (i === 0 ? ' active' : '');
+    div.style.background = color;
+    div.dataset.color = color;
+    div.dataset.index = i;
+    const rm = document.createElement('div');
+    rm.className = 'rm';
+    rm.textContent = '×';
+    rm.onclick = (e) => {
+      e.stopPropagation();
+      if (state.palette.length > 1) {
+        state.palette.splice(i, 1);
+        renderPalette(); drawPattern(animElapsedMs);
+      }
+    };
+    div.appendChild(rm);
+    div.onclick = () => {
+      document.getElementById('colorPickerHidden').dataset.index = i;
+      document.getElementById('colorPickerHidden').value = color;
+      document.getElementById('colorPickerHidden').click();
+    };
+    container.insertBefore(div, addBtn);
+  });
+}
+
+document.getElementById('addColorBtn').onclick = () => {
+  document.getElementById('colorPickerHidden').dataset.index = 'new';
+  document.getElementById('colorPickerHidden').value = '#ffffff';
+  document.getElementById('colorPickerHidden').click();
+};
+
+document.getElementById('colorPickerHidden').addEventListener('input', e => {
+  const idx = e.target.dataset.index;
+  if (idx === 'new') {
+    state.palette.push(e.target.value);
+  } else {
+    state.palette[parseInt(idx)] = e.target.value;
+  }
+  renderPalette();
+  drawPattern(animElapsedMs);
+});
+
+function applyPalette(colors) {
+  state.palette = [...colors];
+  renderPalette();
+  drawPattern(animElapsedMs);
+}
+window.applyPalette = applyPalette;
+
+// Seed
+function randomize() {
+  state.seed = Math.floor(Math.random() * 99999);
+  document.getElementById('seedInput').value = state.seed;
+  drawPattern(animElapsedMs);
+}
+function applySeed() {
+  const v = document.getElementById('seedInput').value;
+  state.seed = v ? parseInt(v) : Math.floor(Math.random()*99999);
+  drawPattern(animElapsedMs);
+}
+window.randomize = randomize;
+window.applySeed = applySeed;
+
+// Canvas size
+function applyCanvasSize() {
+  const w = parseInt(document.getElementById('canvasW').value) || 600;
+  const h = parseInt(document.getElementById('canvasH').value) || 600;
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.maxWidth = Math.min(w, 600) + 'px';
+  canvas.style.maxHeight = Math.min(h, 600) + 'px';
+  drawPattern(animElapsedMs);
+}
+function setSize(w, h) {
+  document.getElementById('canvasW').value = w;
+  document.getElementById('canvasH').value = h;
+  applyCanvasSize();
+}
+window.applyCanvasSize = applyCanvasSize;
+window.setSize = setSize;
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportPNG() {
+  const link = document.createElement('a');
+  link.download = 'pattern-' + state.seed + '.png';
+  link.href = canvas.toDataURL('image/png');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  toast('PNG exported!');
+}
+
+function exportSVG() {
+  // Rebuild pattern as SVG
+  const W = canvas.width, H = canvas.height;
+  const sp = state.spacing;
+  let svgShapes = '';
+  initRng(state.seed);
+  let count = 0;
+
+  function svgShape(x, y, size, color, rotation) {
+    const s = size;
+    const op = state.opacity / 100;
+    let path = '';
+    let extra = '';
+
+    switch (state.shape) {
+      case 'circle':
+        path = `<circle cx="${x}" cy="${y}" r="${s/2}" fill="${state.strokeOnly?'none':color}" stroke="${color}" stroke-width="${state.strokeOnly?Math.max(1,s*0.12):0}" opacity="${op}"/>`;
+        break;
+      case 'square':
+        path = `<rect x="${x-s/2}" y="${y-s/2}" width="${s}" height="${s}" fill="${state.strokeOnly?'none':color}" stroke="${color}" stroke-width="${state.strokeOnly?Math.max(1,s*0.12):0}" opacity="${op}" transform="rotate(${rotation},${x},${y})"/>`;
+        break;
+      case 'diamond': {
+        const pts = `${x},${y-s/2} ${x+s/2},${y} ${x},${y+s/2} ${x-s/2},${y}`;
+        path = `<polygon points="${pts}" fill="${state.strokeOnly?'none':color}" stroke="${color}" stroke-width="${state.strokeOnly?Math.max(1,s*0.1):0}" opacity="${op}" transform="rotate(${rotation},${x},${y})"/>`;
+        break;
+      }
+      case 'hexagon': {
+        let pts = '';
+        for (let i=0;i<6;i++) { const a=i*60*Math.PI/180; pts += `${x+Math.cos(a)*s/2},${y+Math.sin(a)*s/2} `; }
+        path = `<polygon points="${pts.trim()}" fill="${state.strokeOnly?'none':color}" stroke="${color}" stroke-width="${state.strokeOnly?Math.max(1,s*0.1):0}" opacity="${op}" transform="rotate(${rotation},${x},${y})"/>`;
+        break;
+      }
+      case 'ring':
+        path = `<circle cx="${x}" cy="${y}" r="${s/2}" fill="none" stroke="${color}" stroke-width="${s/5}" opacity="${op}"/>`;
+        break;
+      default:
+        path = `<circle cx="${x}" cy="${y}" r="${Math.max(1,s/2)}" fill="${state.strokeOnly?'none':color}" stroke="${color}" stroke-width="${state.strokeOnly?1:0}" opacity="${op}"/>`;
+    }
+    return path;
+  }
+
+  // Simplified grid for SVG (only grid type for brevity)
+  if (state.patternType === 'grid' || state.patternType === 'hex' || state.patternType === 'brick') {
+    let row = 0, i = 0;
+    const yStep = state.patternType === 'hex' ? sp*0.87 : sp;
+    for (let y = sp/2; y < H + sp; y += yStep) {
+      const offset = (state.patternType !== 'grid' && row%2) ? sp/2 : 0;
+      for (let x = offset + sp/2; x < W + sp; x += sp) {
+        const jx = (seededRand()-0.5)*state.jitter*2;
+        const jy = (seededRand()-0.5)*state.jitter*2;
+        const s = getVariedSize(state.size, x, y, i);
+        svgShapes += svgShape(x+jx, y+jy, s, getColor(i), state.rotation);
+        i++; count++;
+      }
+      row++;
+    }
+  } else {
+    // Fallback: embed PNG
+    const dataUrl = canvas.toDataURL('image/png');
+    svgShapes = `<image href="${dataUrl}" x="0" y="0" width="${W}" height="${H}"/>`;
+  }
+
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  ${state.bgTransparent ? '' : `<rect width="${W}" height="${H}" fill="${state.bgColor}"/>`}
+  ${svgShapes}
+</svg>`;
+
+  const blob = new Blob([svg], {type:'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = 'pattern-' + state.seed + '.svg';
+  link.href = url;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  toast('SVG exported!');
+}
+
+function exportFigma() {
+  const dataUrl = canvas.toDataURL('image/png');
+  if (navigator.clipboard && window.ClipboardItem) {
+    const blobPromise = fetch(dataUrl).then(r => r.blob());
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': blobPromise })])
+      .then(() => toast('Copied! Paste in Figma with Ctrl+V / Cmd+V'))
+      .catch(() => figmaFallback(dataUrl));
+  } else {
+    figmaFallback(dataUrl);
+  }
+}
+
+function figmaFallback(dataUrl) {
+  if (!dataUrl) dataUrl = canvas.toDataURL('image/png');
+  const win = window.open();
+  if (win) {
+    win.document.write('<html><head><title>Copy into Figma</title>'
+      + '<style>body{margin:0;background:#111;display:flex;flex-direction:column;'
+      + 'align-items:center;justify-content:center;min-height:100vh;'
+      + 'font-family:monospace;color:#aaa;gap:16px;padding:20px}'
+      + 'p{font-size:13px;text-align:center}'
+      + 'img{max-width:90vw;max-height:80vh;border:1px solid #333}'
+      + '</style></head><body>'
+      + '<p>Right-click the image &rarr; <strong style="color:#c8ff00">Copy Image</strong>'
+      + ' &rarr; paste into Figma with Ctrl+V / Cmd+V</p>'
+      + '<img src="' + dataUrl + '"></body></html>');
+    toast('Opened in new tab — right-click the image to copy');
+  } else {
+    const link = document.createElement('a');
+    link.download = 'figma-pattern-' + state.seed + '.png';
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast('PNG saved — drag into Figma');
+  }
+}
+
+window.exportPNG = exportPNG;
+window.exportSVG = exportSVG;
+window.exportFigma = exportFigma;
+
+// ─── LOTTIE EXPORT ────────────────────────────────────────────────────────────
+function exportLottie() {
+  toast('Building Lottie…');
+  setTimeout(() => {
+    try {
+      const lottie = buildLottieJSON();
+      const blob = new Blob([JSON.stringify(lottie)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = 'pattern-' + state.seed + '.json';
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast('Lottie exported! Import via LottieFiles plugin in Figma.');
+    } catch(e) {
+      toast('Export failed: ' + e.message);
+      console.error(e);
+    }
+  }, 50);
+}
+window.exportLottie = exportLottie;
+
+function buildLottieJSON() {
+  const W = canvas.width, H = canvas.height;
+  const FPS = 60;
+  // Duration: longest animated period × 1.5 cycles, capped at 12s
+  const maxPeriodSec = state.animEnabled ? state.animSpeed * 1.4 * 1.5 : 3;
+  const durationSec = Math.min(12, Math.max(2, maxPeriodSec));
+  const totalFrames = Math.round(durationSec * FPS);
+
+  // ── collect all elements via geometry dry-run ──────────────────────────────
+  const elements = [];
+  collectElements(W, H, elements);
+
+  // ── hex color → [r,g,b] 0..1 ──────────────────────────────────────────────
+  function hexToRgb(hex) {
+    const h = hex.replace('#','');
+    const len = h.length === 3 ? 1 : 2;
+    const r = parseInt(h.substring(0, len) + (len===1?h[0]:''), 16) / 255;
+    const g = parseInt(h.substring(len, len*2) + (len===1?h[len]:''), 16) / 255;
+    const b = parseInt(h.substring(len*2, len*3) + (len===1?h[len*2]:''), 16) / 255;
+    return [r, g, b];
+  }
+
+  // ── bezier handles for Lottie keyframes ───────────────────────────────────
+  // Lottie uses out-tangent of kf[n] and in-tangent of kf[n+1]
+  // for the segment between them. We replicate state.animBezier.
+  const [p1x, p1y, p2x, p2y] = state.animBezier;
+  // Lottie handle format: {x:[0..1], y:[0..1]} normalised to value range
+  const outHandle = { x: [p1x], y: [p1y] };
+  const inHandle  = { x: [1 - p2x], y: [1 - p2y] };
+
+  // ── bg layer (solid) ──────────────────────────────────────────────────────
+  const bgRgb = hexToRgb(state.bgColor);
+  const bgLayer = {
+    ty: 1, // solid
+    nm: 'Background',
+    ind: 0,
+    ip: 0, op: totalFrames,
+    st: 0, sr: 1,
+    ks: { o:{a:0,k:100}, r:{a:0,k:0}, p:{a:0,k:[W/2,H/2,0]}, a:{a:0,k:[0,0,0]}, s:{a:0,k:[100,100,100]} },
+    sw: W, sh: H,
+    sc: state.bgColor,
+    bm: 0
+  };
+
+  // ── shape layers for each element ────────────────────────────────────────
+  const layers = [bgLayer];
+
+  elements.forEach((el, idx) => {
+    const { x, y, size, color, baseOpacity, elemIndex } = el;
+    const rgb = hexToRgb(color);
+
+    // Build shape path for this element
+    const shapeItems = buildLottieShape(x, y, size, el.rotation);
+
+    // Opacity animation
+    let opacityProp;
+    const h = elemHash(elemIndex + state.seed * 7);
+    const participates = state.animEnabled && (h % 100) < state.animDensity;
+
+    if (!participates) {
+      // Static opacity
+      opacityProp = { a: 0, k: Math.round(baseOpacity * 100) };
+    } else {
+      // Animated opacity: sample the same curve as getAnimAlpha at key frames
+      const phaseOffset = (elemHash(elemIndex * 3 + 1) % 1000) / 1000;
+      const periodVariance = 0.6 + (elemHash(elemIndex * 7 + 3) % 1000) / 1000 * 0.8;
+      const period = state.animSpeed * periodVariance; // seconds
+      const bezFn = cubicBezier(p1x, p1y, p2x, p2y);
+
+      // Sample N keyframes spread over totalFrames
+      const SAMPLES = Math.min(120, Math.max(24, Math.round(totalFrames / 2)));
+      const keyframes = [];
+      for (let k = 0; k <= SAMPLES; k++) {
+        const t = k / SAMPLES;
+        const nowSec = t * durationSec;
+        const raw = ((nowSec / period + phaseOffset) % 1);
+        const triangle = raw < 0.5 ? raw * 2 : (1 - raw) * 2;
+        const eased = bezFn(triangle);
+        const animMult = 1 - eased;
+        const opVal = Math.round(baseOpacity * animMult * 100);
+        const frame = Math.round(t * totalFrames);
+
+        if (k < SAMPLES) {
+          keyframes.push({
+            t: frame,
+            s: [opVal],
+            e: [opVal], // will be overwritten by next iteration
+            o: outHandle,
+            i: inHandle
+          });
+        } else {
+          // last keyframe has no easing
+          keyframes.push({ t: frame, s: [opVal] });
+        }
+        // patch previous keyframe's end value
+        if (k > 0) keyframes[k-1].e = [opVal];
+      }
+      opacityProp = { a: 1, k: keyframes };
+    }
+
+    const layer = {
+      ty: 4, // shape layer
+      nm: 'el_' + idx,
+      ind: idx + 1,
+      ip: 0, op: totalFrames,
+      st: 0, sr: 1,
+      ks: {
+        o: opacityProp,
+        r: { a: 0, k: 0 },
+        p: { a: 0, k: [x, y, 0] },
+        a: { a: 0, k: [0, 0, 0] },
+        s: { a: 0, k: [100, 100, 100] }
+      },
+      shapes: [
+        {
+          ty: 'gr',
+          nm: 'shape',
+          it: [
+            ...shapeItems,
+            {
+              ty: state.strokeOnly ? 'st' : 'fl',
+              nm: state.strokeOnly ? 'Stroke' : 'Fill',
+              c: { a: 0, k: [...rgb, 1] },
+              o: { a: 0, k: 100 },
+              ...(state.strokeOnly ? { w: { a: 0, k: Math.max(1, size * 0.12) }, lc: 2, lj: 2 } : {}),
+              r: 1
+            },
+            { ty: 'tr', p:{a:0,k:[0,0]}, a:{a:0,k:[0,0]}, s:{a:0,k:[100,100]}, r:{a:0,k:el.rotation}, o:{a:0,k:100} }
+          ]
+        }
+      ],
+      bm: 0
+    };
+    layers.push(layer);
+  });
+
+  return {
+    v: '5.9.0',
+    nm: 'PatternLab Export',
+    fr: FPS,
+    ip: 0,
+    op: totalFrames,
+    w: W,
+    h: H,
+    layers,
+    assets: [],
+    fonts: { list: [] },
+    meta: { g: 'PatternLab', tc: '', cl: '', ln: '', pg: '' }
+  };
+}
+
+// Build a Lottie shape path item for a given shape type, centered at 0,0
+function buildLottieShape(cx, cy, size, rotation) {
+  const s = size;
+  const r2 = s / 2;
+
+  switch (state.shape) {
+    case 'circle':
+    case 'dot':
+    case 'ring': {
+      const radius = state.shape === 'dot' ? Math.max(1, s/5) : r2;
+      return [{
+        ty: 'el', nm: 'Ellipse',
+        p: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [radius*2, radius*2] },
+        d: 1
+      }];
+    }
+    case 'square': {
+      return [{
+        ty: 'rc', nm: 'Rect',
+        p: { a: 0, k: [0, 0] },
+        s: { a: 0, k: [s, s] },
+        r: { a: 0, k: 0 },
+        d: 1
+      }];
+    }
+    default: {
+      // Generic: build polygon vertices for the shape
+      const verts = getShapeVerts(s);
+      if (!verts || verts.length === 0) {
+        return [{ ty: 'el', p:{a:0,k:[0,0]}, s:{a:0,k:[s,s]}, d:1, nm:'E' }];
+      }
+      const v = verts.map(p => [p[0], p[1]]);
+      const iv = verts.map(() => [0, 0]);
+      const ov = verts.map(() => [0, 0]);
+      return [{
+        ty: 'sh', nm: 'Path', d: 1,
+        ks: { a: 0, k: { i: iv, o: ov, v, c: true } }
+      }];
+    }
+  }
+}
+
+// Returns vertices for polygon shapes, centered at 0,0
+function getShapeVerts(s) {
+  const r = s / 2;
+  switch (state.shape) {
+    case 'diamond':
+      return [[0,-r],[r,0],[0,r],[-r,0]];
+    case 'triangle':
+      return [[0,-r],[r,r],[-r,r]];
+    case 'hexagon':
+      return Array.from({length:6}, (_,i) => {
+        const a = i * 60 * Math.PI/180;
+        return [Math.cos(a)*r, Math.sin(a)*r];
+      });
+    case 'star':
+      return Array.from({length:10}, (_,i) => {
+        const a = (i*36 - 90) * Math.PI/180;
+        const rad = i%2===0 ? r : r/2.5;
+        return [Math.cos(a)*rad, Math.sin(a)*rad];
+      });
+    case 'cross': {
+      const t = r/3;
+      return [[-t,-r],[t,-r],[t,-t],[r,-t],[r,t],[t,t],[t,r],[-t,r],[-t,t],[-r,t],[-r,-t],[-t,-t]];
+    }
+    default:
+      return null;
+  }
+}
+
+// Collect all element geometry using same logic as drawPattern but without drawing
+function collectElements(W, H, out) {
+  initRng(state.seed);
+  const sp = state.spacing;
+  let i = 0;
+
+  function pushEl(x, y, size, color, rotation) {
+    // get base opacity (static part, no animation)
+    const baseOpacity = state.opacity / 100;
+    out.push({ x, y, size, color, rotation, baseOpacity, elemIndex: i });
+    i++;
+  }
+
+  function jrand() { return (seededRand()-0.5); }
+
+  switch (state.patternType) {
+    case 'grid':
+      for (let y = sp/2; y < H + sp; y += sp)
+        for (let x = sp/2; x < W + sp; x += sp) {
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand(); // consume opR
+          const s = getVariedSize(state.size, x, y, i);
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+        }
+      break;
+    case 'hex': {
+      let row = 0;
+      for (let y = sp*0.6; y < H + sp; y += sp*0.87) {
+        const off = (row%2)*sp/2;
+        for (let x = off+sp/2; x < W + sp; x += sp) {
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y, i);
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+        }
+        row++;
+      }
+      break;
+    }
+    case 'brick': {
+      let row = 0;
+      for (let y = sp/2; y < H + sp; y += sp) {
+        const off = (row%2)*sp/2;
+        for (let x = off+sp/2; x < W + sp; x += sp) {
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y, i);
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+(state.altRow&&row%2?45:0));
+        }
+        row++;
+      }
+      break;
+    }
+    case 'radial': {
+      const rings = Math.ceil(Math.max(W,H)/sp)+1;
+      for (let r = 0; r <= rings; r++) {
+        const radius = r*sp;
+        const num = r===0?1:Math.max(6,Math.floor(2*Math.PI*radius/sp));
+        for (let j = 0; j < num; j++) {
+          const angle = (j/num)*Math.PI*2+(state.rotation*Math.PI/180);
+          const x = W/2+Math.cos(angle)*radius, y = H/2+Math.sin(angle)*radius;
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y, i);
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+(angle*180/Math.PI));
+        }
+      }
+      break;
+    }
+    case 'wave':
+      for (let y = sp; y < H + sp; y += sp)
+        for (let x = 0; x < W + sp; x += sp) {
+          const wave = Math.sin((x/W)*Math.PI*4+(y/H)*Math.PI*2)*sp*0.4;
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y+wave, i);
+          const rot = state.rotation+Math.cos((x/W)*Math.PI*4)*30;
+          pushEl(x+jx, y+wave+jy, s, getColor(i), rot);
+        }
+      break;
+    case 'scatter': {
+      const num = Math.floor((W*H)/(sp*sp*0.5));
+      for (let n = 0; n < num; n++) {
+        const x = seededRand()*W, y = seededRand()*H;
+        const s = getVariedSize(state.size*(0.4+seededRand()*0.8), x, y, i);
+        const r = seededRand()*360;
+        seededRand();
+        pushEl(x, y, s, getColor(i), state.rotation+r);
+      }
+      break;
+    }
+    case 'triangles': {
+      let row = 0;
+      const th = sp*0.866;
+      for (let y = 0; y < H + th; y += th) {
+        for (let x = (row%2)*sp/2; x < W+sp; x += sp/2) {
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y, i);
+          const flip = (i%2===0)?0:180;
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+flip);
+        }
+        row++;
+      }
+      break;
+    }
+    case 'diagonal':
+      for (let y = -sp; y < H + sp*2; y += sp)
+        for (let x = -sp; x < W + sp*2; x += sp) {
+          const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
+          seededRand();
+          const s = getVariedSize(state.size, x, y, i);
+          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+        }
+      break;
+  }
+}
+
+// ─── ANIMATION CONTROLS ───────────────────────────────────────────────────────
+const animControls = document.getElementById('animControls');
+
+document.getElementById('animToggle').addEventListener('click', function() {
+  state.animEnabled = !state.animEnabled;
+  this.classList.toggle('on', state.animEnabled);
+  animControls.style.opacity = state.animEnabled ? '1' : '0.35';
+  animControls.style.pointerEvents = state.animEnabled ? 'auto' : 'none';
+  if (state.animEnabled) startAnimLoop(); else stopAnimLoop();
+});
+
+const animSpeedEl = document.getElementById('animSpeed');
+animSpeedEl.addEventListener('input', () => {
+  state.animSpeed = parseFloat(animSpeedEl.value);
+  document.getElementById('animSpeedVal').textContent = state.animSpeed.toFixed(1) + 's';
+});
+
+const animDensityEl = document.getElementById('animDensity');
+animDensityEl.addEventListener('input', () => {
+  state.animDensity = parseInt(animDensityEl.value);
+  document.getElementById('animDensityVal').textContent = state.animDensity + '%';
+});
+
+// Bezier presets
+const bezierCustomControls = document.getElementById('bezierCustomControls');
+document.querySelectorAll('[data-bezier]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-bezier]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const val = btn.dataset.bezier;
+    if (val === 'custom') {
+      bezierCustomControls.style.display = 'block';
+    } else {
+      bezierCustomControls.style.display = 'none';
+      state.animBezier = val.split(',').map(Number);
+      drawBezierPreview();
+    }
+  });
+});
+
+// Custom bezier sliders
+function syncCustomBezier() {
+  const p1x = parseFloat(document.getElementById('bp1x').value);
+  const p1y = parseFloat(document.getElementById('bp1y').value);
+  const p2x = parseFloat(document.getElementById('bp2x').value);
+  const p2y = parseFloat(document.getElementById('bp2y').value);
+  document.getElementById('bp1xVal').textContent = p1x.toFixed(2);
+  document.getElementById('bp1yVal').textContent = p1y.toFixed(2);
+  document.getElementById('bp2xVal').textContent = p2x.toFixed(2);
+  document.getElementById('bp2yVal').textContent = p2y.toFixed(2);
+  state.animBezier = [p1x, p1y, p2x, p2y];
+  drawBezierPreview();
+}
+['bp1x','bp1y','bp2x','bp2y'].forEach(id => {
+  document.getElementById(id).addEventListener('input', syncCustomBezier);
+});
+
+// Bezier preview canvas
+function drawBezierPreview() {
+  const bc = document.getElementById('bezierPreview');
+  const bctx = bc.getContext('2d');
+  const W = bc.width, H = bc.height;
+  const pad = 12;
+  bctx.clearRect(0, 0, W, H);
+
+  // Background
+  bctx.fillStyle = '#0a0a0f';
+  bctx.fillRect(0, 0, W, H);
+
+  // Grid lines
+  bctx.strokeStyle = '#2a2a3a';
+  bctx.lineWidth = 1;
+  for (let g = 0; g <= 4; g++) {
+    const gx = pad + (g/4) * (W - pad*2);
+    const gy = pad + (g/4) * (H - pad*2);
+    bctx.beginPath(); bctx.moveTo(gx, pad); bctx.lineTo(gx, H-pad); bctx.stroke();
+    bctx.beginPath(); bctx.moveTo(pad, gy); bctx.lineTo(W-pad, gy); bctx.stroke();
+  }
+
+  const [p1x, p1y, p2x, p2y] = state.animBezier;
+  const fn = cubicBezier(p1x, p1y, p2x, p2y);
+
+  // Map t(0..1) → canvas coords
+  function tx(t) { return pad + t * (W - pad*2); }
+  // y: 0=bottom, 1=top; clamp to visible area
+  function ty(v) { return H - pad - Math.max(-0.5, Math.min(1.5, v)) * (H - pad*2); }
+
+  // Draw control point handles
+  bctx.strokeStyle = '#3a3a5a';
+  bctx.lineWidth = 1;
+  bctx.setLineDash([3,3]);
+  bctx.beginPath(); bctx.moveTo(tx(0), ty(0)); bctx.lineTo(tx(p1x), ty(p1y)); bctx.stroke();
+  bctx.beginPath(); bctx.moveTo(tx(1), ty(1)); bctx.lineTo(tx(p2x), ty(p2y)); bctx.stroke();
+  bctx.setLineDash([]);
+
+  // Control points
+  [[p1x,p1y],[p2x,p2y]].forEach(([cx,cy]) => {
+    bctx.fillStyle = '#7b61ff';
+    bctx.beginPath();
+    bctx.arc(tx(cx), ty(cy), 3.5, 0, Math.PI*2);
+    bctx.fill();
+  });
+
+  // Curve
+  bctx.strokeStyle = '#c8ff00';
+  bctx.lineWidth = 2;
+  bctx.beginPath();
+  for (let step = 0; step <= 80; step++) {
+    const t = step / 80;
+    const v = fn(t);
+    if (step === 0) bctx.moveTo(tx(t), ty(v));
+    else bctx.lineTo(tx(t), ty(v));
+  }
+  bctx.stroke();
+
+  // Endpoints
+  bctx.fillStyle = '#c8ff00';
+  bctx.beginPath(); bctx.arc(tx(0), ty(0), 3, 0, Math.PI*2); bctx.fill();
+  bctx.beginPath(); bctx.arc(tx(1), ty(1), 3, 0, Math.PI*2); bctx.fill();
+}
+
+// ─── USER PRESETS ─────────────────────────────────────────────────────────────
+const USER_PRESETS_KEY = 'patternlab_user_presets';
+
+function loadUserPresets() {
+  try { return JSON.parse(localStorage.getItem(USER_PRESETS_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function saveUserPresetsToStorage(presets) {
+  try { localStorage.setItem(USER_PRESETS_KEY, JSON.stringify(presets)); }
+  catch(e) { toast('Storage full — delete some presets first'); }
+}
+
+function captureStateSnapshot() {
+  // Deep-copy all state keys that define a pattern (exclude runtime/anim state)
+  const snap = {};
+  const skip = new Set(['elementCount']);
+  for (const k of Object.keys(state)) {
+    if (skip.has(k)) continue;
+    snap[k] = Array.isArray(state[k]) ? [...state[k]] : state[k];
+  }
+  return snap;
+}
+
+function captureMiniPreview() {
+  // Draw current pattern at 120×80 and return dataURL
+  const off = document.createElement('canvas');
+  off.width = 120; off.height = 80;
+  const octx = off.getContext('2d');
+  // Scale-draw from the main canvas
+  octx.drawImage(canvas, 0, 0, canvas.width, canvas.height, 0, 0, 120, 80);
+  return off.toDataURL('image/png');
+}
+
+function saveUserPreset() {
+  const input = document.getElementById('presetNameInput');
+  const name = input.value.trim() || ('Preset ' + (loadUserPresets().length + 1));
+  const presets = loadUserPresets();
+  presets.unshift({
+    name,
+    state: captureStateSnapshot(),
+    thumb: captureMiniPreview(),
+    id: Date.now()
+  });
+  saveUserPresetsToStorage(presets);
+  input.value = '';
+  renderUserPresets();
+  toast('Preset "' + name + '" saved!');
+}
+window.saveUserPreset = saveUserPreset;
+
+function deleteUserPreset(id) {
+  const presets = loadUserPresets().filter(p => p.id !== id);
+  saveUserPresetsToStorage(presets);
+  renderUserPresets();
+  toast('Preset deleted');
+}
+
+function applyUserPreset(snap) {
+  // Restore all state fields
+  for (const k of Object.keys(snap)) {
+    if (k in state) {
+      state[k] = Array.isArray(snap[k]) ? [...snap[k]] : snap[k];
+    }
+  }
+
+  // Sync UI controls
+  const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  setEl('spacing', state.spacing);        setTxt('spacingVal', state.spacing);
+  setEl('size', state.size);              setTxt('sizeVal', state.size);
+  setEl('rotation', state.rotation);      setTxt('rotationVal', state.rotation + '°');
+  setEl('opacity', state.opacity);        setTxt('opacityVal', state.opacity + '%');
+  setEl('jitter', state.jitter);          setTxt('jitterVal', state.jitter);
+  setEl('scaleVar', state.scaleVar);      setTxt('scaleVarVal', state.scaleVar + '%');
+  setEl('seedInput', state.seed);
+  setEl('bgColorInput', state.bgColor);
+  setEl('bgColorPicker', state.bgColor);
+  const bhi = document.getElementById('bgHexInput');
+  if (bhi) bhi.value = state.bgColor.toUpperCase();
+
+  // Lit hex sliders
+  setEl('litCellSize', state.litCellSize);    setTxt('litCellSizeVal', state.litCellSize);
+  setEl('litGap', state.litGap);              setTxt('litGapVal', state.litGap);
+  setEl('litStrokeWidth', state.litStrokeWidth); setTxt('litStrokeWidthVal', state.litStrokeWidth);
+  setEl('litIntensity', state.litIntensity);  setTxt('litIntensityVal', state.litIntensity);
+  setEl('litEdgeContrast', state.litEdgeContrast); setTxt('litEdgeContrastVal', state.litEdgeContrast);
+  setEl('litAmbient', state.litAmbient);      setTxt('litAmbientVal', state.litAmbient);
+  setEl('litOpacityMin', state.litOpacityMin); setTxt('litOpacityMinVal', state.litOpacityMin);
+  setEl('litAccentDensity', state.litAccentDensity); setTxt('litAccentDensityVal', state.litAccentDensity + '%');
+  setEl('litCellColor', state.litCellColor);
+  setEl('litEdgeTint', state.litEdgeTint);
+  setEl('litAccentColor', state.litAccentColor);
+
+  // Toggles
+  ['strokeToggle','altRowToggle','multiColorToggle','gradientToggle'].forEach(id => {
+    const key = {strokeToggle:'strokeOnly',altRowToggle:'altRow',multiColorToggle:'multiColor',gradientToggle:'sizeGradient'}[id];
+    document.getElementById(id).classList.toggle('on', state[key]);
+  });
+
+  // Pattern type + shape
+  document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === state.patternType));
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === state.shape));
+
+  // Show/hide lit hex panel
+  showHideLitHexPanel();
+
+  // Update direction wheel if lit hex
+  if (typeof updateLitArrow === 'function') updateLitArrow(state.litLightAngle);
+
+  // Anim toggle
+  document.getElementById('animToggle').classList.toggle('on', state.animEnabled);
+  const animControls = document.getElementById('animControls');
+  animControls.style.opacity = state.animEnabled ? '1' : '0.35';
+  animControls.style.pointerEvents = state.animEnabled ? 'auto' : 'none';
+  setEl('animSpeed', state.animSpeed); setTxt('animSpeedVal', state.animSpeed.toFixed(1) + 's');
+  setEl('animDensity', state.animDensity); setTxt('animDensityVal', state.animDensity + '%');
+
+  renderPalette();
+  drawPattern(animElapsedMs);
+  toast('Preset loaded!');
+}
+
+function renderUserPresets() {
+  const grid = document.getElementById('userPresetGrid');
+  const empty = document.getElementById('userPresetsEmpty');
+  const presets = loadUserPresets();
+  grid.innerHTML = '';
+  empty.style.display = presets.length === 0 ? 'block' : 'none';
+
+  presets.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'preset-card';
+    card.style.cursor = 'pointer';
+
+    // Thumbnail
+    const img = document.createElement('img');
+    img.src = p.thumb;
+    img.style.cssText = 'display:block;width:100%;aspect-ratio:3/2;object-fit:cover;';
+    card.appendChild(img);
+
+    // Name label
+    const nm = document.createElement('div');
+    nm.className = 'preset-name';
+    nm.textContent = p.name;
+    card.appendChild(nm);
+
+    // Delete button
+    const del = document.createElement('button');
+    del.className = 'preset-del';
+    del.textContent = '×';
+    del.title = 'Delete preset';
+    del.onclick = e => { e.stopPropagation(); deleteUserPreset(p.id); };
+    card.appendChild(del);
+
+    card.onclick = () => applyUserPreset(p.state);
+    grid.appendChild(card);
+  });
+}
+
+// ─── PRESETS ──────────────────────────────────────────────────────────────────
+const PRESETS = [
+  { name:'NEON GRID', type:'grid', shape:'circle', spacing:36, size:12, palette:['#c8ff00','#7b61ff'], bg:'#0a0a0f', scaleVar:0, jitter:0, seed:42 },
+  { name:'HEX DRIFT', type:'hex', shape:'hexagon', spacing:44, size:18, palette:['#00d4ff','#7b61ff','#ff4d6d'], bg:'#0d1b2a', scaleVar:30, jitter:5, seed:99 },
+  { name:'STAR FIELD', type:'scatter', shape:'star', spacing:50, size:16, palette:['#ffffff','#ffeb3b','#00d4ff'], bg:'#060608', scaleVar:80, jitter:0, seed:777 },
+  { name:'WAVE DOT', type:'wave', shape:'dot', spacing:28, size:8, palette:['#ff4d6d','#ff8c00'], bg:'#1a0a12', scaleVar:20, jitter:8, seed:321 },
+  { name:'EARTH BRICK', type:'brick', shape:'square', spacing:38, size:22, palette:['#e8d5c4','#c4a882'], bg:'#2a1f14', scaleVar:0, jitter:0, seed:55 },
+  { name:'RADIAL', type:'radial', shape:'triangle', spacing:40, size:10, palette:['#c8ff00','#00ff88'], bg:'#0a0f0a', scaleVar:30, jitter:0, seed:11 },
+];
+
+function buildPresets() {
+  const grid = document.getElementById('presetGrid');
+  PRESETS.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'preset-card';
+    const pc = document.createElement('canvas');
+    pc.width = 120; pc.height = 80;
+    card.appendChild(pc);
+    const nm = document.createElement('div');
+    nm.className = 'preset-name';
+    nm.textContent = p.name;
+    card.appendChild(nm);
+
+    // Mini render
+    const pctx = pc.getContext('2d');
+    pctx.fillStyle = p.bg;
+    pctx.fillRect(0,0,120,80);
+    initRng(p.seed);
+    const sp2 = p.spacing * 0.5;
+    const sz2 = p.size * 0.4;
+    let pi = 0;
+    for (let y=sp2/2; y<80+sp2; y+=sp2) {
+      for (let x=sp2/2; x<120+sp2; x+=sp2) {
+        const c = p.palette[pi % p.palette.length];
+        pctx.fillStyle = c;
+        pctx.beginPath();
+        pctx.arc(x, y, sz2/2, 0, Math.PI*2);
+        pctx.fill();
+        pi++;
+      }
+    }
+
+    card.onclick = () => {
+      applyPreset(p);
+    };
+    grid.appendChild(card);
+  });
+}
+
+function applyPreset(p) {
+  state.patternType = p.type;
+  state.shape = p.shape;
+  state.spacing = p.spacing;
+  state.size = p.size;
+  state.palette = [...p.palette];
+  state.bgColor = p.bg;
+  state.scaleVar = p.scaleVar;
+  state.jitter = p.jitter;
+  state.seed = p.seed;
+  state.multiColor = true;
+
+  // Sync UI
+  document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === p.type));
+  document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === p.shape));
+  document.getElementById('spacing').value = p.spacing;
+  document.getElementById('spacingVal').textContent = p.spacing;
+  document.getElementById('size').value = p.size;
+  document.getElementById('sizeVal').textContent = p.size;
+  document.getElementById('scaleVar').value = p.scaleVar;
+  document.getElementById('scaleVarVal').textContent = p.scaleVar + '%';
+  document.getElementById('jitter').value = p.jitter;
+  document.getElementById('jitterVal').textContent = p.jitter;
+  document.getElementById('seedInput').value = p.seed;
+  state.bgColor = p.bg;
+
+  renderPalette();
+  drawPattern(animElapsedMs);
+  toast('Preset applied!');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+canvas.style.maxWidth = '600px';
+canvas.style.maxHeight = '600px';
+document.getElementById('seedInput').value = state.seed;
+renderPalette();
+buildPresets();
+renderUserPresets();
+drawBezierPreview();
+drawPattern(animElapsedMs);
+</script>
+</body>
+</html>
