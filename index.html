@@ -22,6 +22,21 @@
     --font-display: 'Syne', sans-serif;
   }
 
+  :root.light {
+    --bg: #f0f0f5;
+    --surface: #ffffff;
+    --surface2: #e8e8f0;
+    --border: #d0d0e0;
+    --accent: #5a8a00;
+    --accent2: #5b40e0;
+    --accent3: #e0254a;
+    --text: #1a1a2e;
+    --muted: #8888aa;
+  }
+
+  *, *::before, *::after { transition: background-color 0.2s, border-color 0.2s, color 0.2s; }
+  input[type=range], canvas, img { transition: none !important; }
+
   body {
     background: var(--bg);
     color: var(--text);
@@ -87,18 +102,13 @@
     overflow: hidden;
     background-image: radial-gradient(circle at 50% 50%, #141420 0%, #060608 70%);
   }
+  :root.light .canvas-area {
+    background: #e0e0ec;
+    background-image: radial-gradient(circle at 50% 50%, #ebebf5 0%, #d8d8e8 70%);
+  }
   .canvas-wrap {
     position: relative;
     box-shadow: 0 0 0 1px var(--border), 0 32px 80px rgba(0,0,0,0.7);
-  }
-  .canvas-wrap.transparent-bg {
-    background-image: linear-gradient(45deg, #2a2a3a 25%, transparent 25%),
-      linear-gradient(-45deg, #2a2a3a 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, #2a2a3a 75%),
-      linear-gradient(-45deg, transparent 75%, #2a2a3a 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
-    background-color: #1a1a24;
   }
   #patternCanvas {
     display: block;
@@ -124,6 +134,27 @@
   .control-label .val {
     color: var(--accent); font-size: 11px;
   }
+  .slider-row {
+    display: flex; gap: 6px; align-items: center;
+  }
+  .slider-row input[type=range] { flex: 1; }
+  .num-input {
+    width: 46px; flex-shrink: 0;
+    padding: 3px 5px;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.15s;
+    -moz-appearance: textfield;
+  }
+  .num-input::-webkit-inner-spin-button,
+  .num-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .num-input:focus { border-color: var(--accent2); }
 
   input[type=range] {
     -webkit-appearance: none;
@@ -423,6 +454,13 @@
 <header>
   <div class="logo">PATTERN<span>LAB</span></div>
   <div class="header-actions">
+    <button id="themeToggle" onclick="toggleTheme()" title="Toggle Light/Dark mode"
+      style="background:var(--surface2);border:1.5px solid var(--border);border-radius:8px;
+      padding:6px 10px;cursor:pointer;font-family:var(--font-mono);font-size:11px;
+      color:var(--muted);display:flex;align-items:center;gap:6px;transition:all 0.15s;">
+      <span id="themeIcon">☀</span>
+      <span id="themeLabel">LIGHT</span>
+    </button>
     <span class="figma-badge">
       <svg width="10" height="14" viewBox="0 0 10 14" fill="none">
         <path d="M5 7a2 2 0 1 1 4 0 2 2 0 0 1-4 0z" fill="#1ABCFE"/>
@@ -478,32 +516,50 @@
 
       <div class="control-group">
         <div class="control-label">Spacing <span class="val" id="spacingVal">40</span></div>
-        <input type="range" id="spacing" min="10" max="120" value="40" step="2">
+        <div class="slider-row">
+          <input type="range" id="spacing" min="10" max="120" value="40" step="2">
+          <input type="number" class="num-input" id="spacingNum" value="40" min="10" max="120" step="2">
+        </div>
       </div>
 
       <div class="control-group">
         <div class="control-label">Size <span class="val" id="sizeVal">14</span></div>
-        <input type="range" id="size" min="2" max="60" value="14" step="1">
+        <div class="slider-row">
+          <input type="range" id="size" min="2" max="60" value="14" step="1">
+          <input type="number" class="num-input" id="sizeNum" value="14" min="2" max="60" step="1">
+        </div>
       </div>
 
       <div class="control-group">
         <div class="control-label">Rotation <span class="val" id="rotationVal">0°</span></div>
-        <input type="range" id="rotation" min="0" max="360" value="0" step="5">
+        <div class="slider-row">
+          <input type="range" id="rotation" min="0" max="360" value="0" step="5">
+          <input type="number" class="num-input" id="rotationNum" value="0" min="0" max="360" step="5">
+        </div>
       </div>
 
       <div class="control-group">
         <div class="control-label">Opacity <span class="val" id="opacityVal">100%</span></div>
-        <input type="range" id="opacity" min="10" max="100" value="100" step="5">
+        <div class="slider-row">
+          <input type="range" id="opacity" min="10" max="100" value="100" step="5">
+          <input type="number" class="num-input" id="opacityNum" value="100" min="10" max="100" step="5">
+        </div>
       </div>
 
       <div class="control-group">
         <div class="control-label">Jitter <span class="val" id="jitterVal">0</span></div>
-        <input type="range" id="jitter" min="0" max="30" value="0" step="1">
+        <div class="slider-row">
+          <input type="range" id="jitter" min="0" max="30" value="0" step="1">
+          <input type="number" class="num-input" id="jitterNum" value="0" min="0" max="30" step="1">
+        </div>
       </div>
 
       <div class="control-group">
         <div class="control-label">Scale Variance <span class="val" id="scaleVarVal">0%</span></div>
-        <input type="range" id="scaleVar" min="0" max="100" value="0" step="5">
+        <div class="slider-row">
+          <input type="range" id="scaleVar" min="0" max="100" value="0" step="5">
+          <input type="number" class="num-input" id="scaleVarNum" value="0" min="0" max="100" step="5">
+        </div>
       </div>
 
       <div style="height:1px;background:var(--border);margin:14px 0 14px;"></div>
@@ -511,17 +567,26 @@
 
       <div class="control-group">
         <div class="control-label">Variance Amount <span class="val" id="opacityVarVal">OFF</span></div>
-        <input type="range" id="opacityVar" min="0" max="100" value="0" step="5">
+        <div class="slider-row">
+          <input type="range" id="opacityVar" min="0" max="100" value="0" step="5">
+          <input type="number" class="num-input" id="opacityVarNum" value="0" min="0" max="100" step="5">
+        </div>
       </div>
 
       <div class="control-group" id="opacityRangeGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
         <div class="control-label">Min Opacity <span class="val" id="opacityMinVal">0%</span></div>
-        <input type="range" id="opacityMin" min="0" max="100" value="0" step="5">
+        <div class="slider-row">
+          <input type="range" id="opacityMin" min="0" max="100" value="0" step="5">
+          <input type="number" class="num-input" id="opacityMinNum" value="0" min="0" max="100" step="5">
+        </div>
       </div>
 
       <div class="control-group" id="opacityMaxGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
         <div class="control-label">Max Opacity <span class="val" id="opacityMaxVal">100%</span></div>
-        <input type="range" id="opacityMax" min="0" max="100" value="100" step="5">
+        <div class="slider-row">
+          <input type="range" id="opacityMax" min="0" max="100" value="100" step="5">
+          <input type="number" class="num-input" id="opacityMaxNum" value="100" min="0" max="100" step="5">
+        </div>
       </div>
 
       <div class="control-group" id="opacityModeGroup" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
@@ -563,11 +628,17 @@
       <div id="magnetControls" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;margin-top:4px;">
         <div class="control-group">
           <div class="control-label">Radius <span class="val" id="magnetRadiusVal">120</span></div>
-          <input type="range" id="magnetRadius" min="20" max="400" value="120" step="10">
+          <div class="slider-row">
+            <input type="range" id="magnetRadius" min="20" max="400" value="120" step="10">
+            <input type="number" class="num-input" id="magnetRadiusNum" value="120" min="20" max="400" step="10">
+          </div>
         </div>
         <div class="control-group">
           <div class="control-label">Strength <span class="val" id="magnetStrengthVal">2.5×</span></div>
-          <input type="range" id="magnetStrength" min="1.2" max="6" value="2.5" step="0.1">
+          <div class="slider-row">
+            <input type="range" id="magnetStrength" min="1.2" max="6" value="2.5" step="0.1">
+            <input type="number" class="num-input" id="magnetStrengthNum" value="2.5" min="1.2" max="6" step="0.1">
+          </div>
         </div>
         <div class="toggle-row" style="margin-bottom:8px;">
           <span class="toggle-label">Shrink Neighbours</span>
@@ -575,11 +646,17 @@
         </div>
         <div class="control-group" id="magnetPushAmountGroup" style="margin-bottom:8px;opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
           <div class="control-label">Shrink Amount <span class="val" id="magnetPushAmountVal">1.0×</span></div>
-          <input type="range" id="magnetPushAmount" min="0.2" max="2.5" value="1.0" step="0.1">
+          <div class="slider-row">
+            <input type="range" id="magnetPushAmount" min="0.2" max="2.5" value="1.0" step="0.1">
+            <input type="number" class="num-input" id="magnetPushAmountNum" value="1.0" min="0.2" max="2.5" step="0.1">
+          </div>
         </div>
         <div class="control-group" style="margin-bottom:0;">
           <div class="control-label">Distance Falloff <span class="val" id="magnetFalloffVal">0%</span></div>
-          <input type="range" id="magnetFalloff" min="0" max="100" value="0" step="5">
+          <div class="slider-row">
+            <input type="range" id="magnetFalloff" min="0" max="100" value="0" step="5">
+            <input type="number" class="num-input" id="magnetFalloffNum" value="0" min="0" max="100" step="5">
+          </div>
         </div>
       </div>
     </div>
@@ -590,15 +667,24 @@
 
     <div class="control-group">
       <div class="control-label">Cell Size <span class="val" id="litCellSizeVal">72</span></div>
-      <input type="range" id="litCellSize" min="20" max="200" value="72" step="2">
+      <div class="slider-row">
+        <input type="range" id="litCellSize" min="20" max="200" value="72" step="2">
+        <input type="number" class="num-input" id="litCellSizeNum" value="72" min="20" max="200" step="2">
+      </div>
     </div>
     <div class="control-group">
       <div class="control-label">Gap <span class="val" id="litGapVal">5</span></div>
-      <input type="range" id="litGap" min="0" max="100" value="5" step="1">
+      <div class="slider-row">
+        <input type="range" id="litGap" min="0" max="100" value="5" step="1">
+        <input type="number" class="num-input" id="litGapNum" value="5" min="0" max="100" step="1">
+      </div>
     </div>
     <div class="control-group">
       <div class="control-label">Stroke Width <span class="val" id="litStrokeWidthVal">1.5</span></div>
-      <input type="range" id="litStrokeWidth" min="0.5" max="6" value="1.5" step="0.5">
+      <div class="slider-row">
+        <input type="range" id="litStrokeWidth" min="0.5" max="6" value="1.5" step="0.5">
+        <input type="number" class="num-input" id="litStrokeWidthNum" value="1.5" min="0.5" max="6" step="0.5">
+      </div>
     </div>
 
     <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
@@ -622,15 +708,24 @@
 
     <div class="control-group">
       <div class="control-label">Intensity <span class="val" id="litIntensityVal">0.55</span></div>
-      <input type="range" id="litIntensity" min="0" max="1" value="0.55" step="0.01">
+      <div class="slider-row">
+        <input type="range" id="litIntensity" min="0" max="1" value="0.55" step="0.01">
+        <input type="number" class="num-input" id="litIntensityNum" value="0.55" min="0" max="1" step="0.01">
+      </div>
     </div>
     <div class="control-group">
       <div class="control-label">Edge Contrast <span class="val" id="litEdgeContrastVal">0.7</span></div>
-      <input type="range" id="litEdgeContrast" min="0" max="1.5" value="0.7" step="0.05">
+      <div class="slider-row">
+        <input type="range" id="litEdgeContrast" min="0" max="1.5" value="0.7" step="0.05">
+        <input type="number" class="num-input" id="litEdgeContrastNum" value="0.7" min="0" max="1.5" step="0.05">
+      </div>
     </div>
     <div class="control-group">
       <div class="control-label">Ambient <span class="val" id="litAmbientVal">0.25</span></div>
-      <input type="range" id="litAmbient" min="0" max="1" value="0.25" step="0.01">
+      <div class="slider-row">
+        <input type="range" id="litAmbient" min="0" max="1" value="0.25" step="0.01">
+        <input type="number" class="num-input" id="litAmbientNum" value="0.25" min="0" max="1" step="0.01">
+      </div>
     </div>
 
     <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
@@ -653,7 +748,10 @@
     </div>
     <div class="control-group">
       <div class="control-label">Accent Density <span class="val" id="litAccentDensityVal">20%</span></div>
-      <input type="range" id="litAccentDensity" min="0" max="100" value="20" step="1">
+      <div class="slider-row">
+        <input type="range" id="litAccentDensity" min="0" max="100" value="20" step="1">
+        <input type="number" class="num-input" id="litAccentDensityNum" value="20" min="0" max="100" step="1">
+      </div>
     </div>
 
     <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
@@ -661,7 +759,10 @@
 
     <div class="control-group">
       <div class="control-label">Opacity Min <span class="val" id="litOpacityMinVal">0.3</span></div>
-      <input type="range" id="litOpacityMin" min="0" max="1" value="0.3" step="0.05">
+      <div class="slider-row">
+        <input type="range" id="litOpacityMin" min="0" max="1" value="0.3" step="0.05">
+        <input type="number" class="num-input" id="litOpacityMinNum" value="0.3" min="0" max="1" step="0.05">
+      </div>
     </div>
     <div class="control-group" style="margin-bottom:0;">
       <div class="control-label">Fade From <span class="val" id="litFadeDirVal">top</span></div>
@@ -703,29 +804,57 @@
         <div class="color-swatch" style="background:#1e3a2f" data-bg="#1e3a2f"></div>
         <input type="color" id="bgColorInput" value="#0a0a0f" title="Custom BG">
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;">
         <input type="color" id="bgColorPicker" value="#0a0a0f"
           style="width:28px;height:28px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--border);padding:0;cursor:pointer;background:none;overflow:hidden;">
         <input type="text" id="bgHexInput" value="#0a0a0f" maxlength="7" spellcheck="false"
           style="flex:1;padding:7px 9px;background:var(--surface2);border:1.5px solid var(--border);
           border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:12px;
           outline:none;letter-spacing:0.08em;text-transform:uppercase;">
-        <button id="bgTransparentBtn" title="Transparent background"
-          onclick="toggleBgTransparent()"
-          style="width:28px;height:28px;flex-shrink:0;border-radius:5px;
-          border:1.5px solid var(--border);background:var(--surface2);
-          cursor:pointer;display:flex;align-items:center;justify-content:center;
-          transition:all 0.15s;padding:0;">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <rect x="0.5" y="0.5" width="13" height="13" rx="2" stroke="var(--muted)" stroke-dasharray="2 2"/>
-            <line x1="1" y1="13" x2="13" y2="1" stroke="var(--accent3)" stroke-width="1.5"/>
-          </svg>
-        </button>
+      </div>
+      <div class="toggle-row" style="margin-bottom:0;">
+        <div>
+          <span class="toggle-label" style="color:var(--text);font-size:11px;">Transparent Export</span>
+          <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:2px;">PNG/SVG exported without background</div>
+        </div>
+        <button class="toggle" id="bgTransparentToggle"></button>
       </div>
     </div>
 
     <div class="panel-section">
       <div class="panel-title">Palette</div>
+
+      <!-- Auto Palette toggle -->
+      <div class="toggle-row" style="margin-bottom:12px;">
+        <div>
+          <span class="toggle-label" style="color:var(--text);font-size:11px;">✦ Auto Palette</span>
+          <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:2px;">Pick 1 color → fills rest automatically</div>
+        </div>
+        <button class="toggle" id="autoPaletteToggle"></button>
+      </div>
+
+      <!-- Auto palette controls (slot count + mode) -->
+      <div id="autoPaletteControls" style="display:none;margin-bottom:12px;">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
+          <span style="font-size:10px;color:var(--muted);font-family:var(--font-mono);flex:1;">Slots</span>
+          <div style="display:flex;gap:4px;">
+            <button class="tab-btn active" data-slots="2" style="font-size:9px;padding:4px 8px;">2</button>
+            <button class="tab-btn" data-slots="3" style="font-size:9px;padding:4px 8px;">3</button>
+            <button class="tab-btn" data-slots="4" style="font-size:9px;padding:4px 8px;">4</button>
+            <button class="tab-btn" data-slots="5" style="font-size:9px;padding:4px 8px;">5</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+          <button class="tab-btn active" data-automode="shades" style="font-size:9px;padding:5px;">SHADES</button>
+          <button class="tab-btn" data-automode="tints" style="font-size:9px;padding:5px;">TINTS</button>
+          <button class="tab-btn" data-automode="analogous" style="font-size:9px;padding:5px;">ANALOGOUS</button>
+          <button class="tab-btn" data-automode="complementary" style="font-size:9px;padding:5px;">COMPLEMENT</button>
+          <button class="tab-btn" data-automode="triadic" style="font-size:9px;padding:5px;">TRIADIC</button>
+          <button class="tab-btn" data-automode="pastel" style="font-size:9px;padding:5px;">PASTEL</button>
+        </div>
+      </div>
+
+      <!-- Color swatches -->
       <div class="palette-multi" id="paletteColors">
         <div class="palette-color active" style="background:#c8ff00" data-color="#c8ff00"></div>
         <div class="palette-color" style="background:#7b61ff" data-color="#7b61ff"></div>
@@ -735,8 +864,9 @@
       </div>
       <input type="color" id="colorPickerHidden" style="position:absolute;opacity:0;pointer-events:none;">
 
+      <!-- Quick Palettes -->
       <div style="margin-top:12px;">
-        <div class="panel-title">Quick Palettes</div>
+        <div class="panel-title" style="margin-bottom:8px;">Quick Palettes</div>
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#c8ff00','#7b61ff','#ff4d6d','#00d4ff'])">NEON</button>
           <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#ff6b6b','#ffa500','#ffeb3b','#4caf50'])">VIVID</button>
@@ -745,6 +875,20 @@
           <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#ffffff','#cccccc','#888888','#333333'])">MONO</button>
           <button class="btn btn-ghost" style="font-size:9px;padding:5px 8px;" onclick="applyPalette(['#00ff88','#00cc6a','#009950'])">GREEN</button>
         </div>
+      </div>
+
+      <!-- Saved Palettes -->
+      <div style="margin-top:14px;">
+        <div class="panel-title" style="margin-bottom:8px;">Saved Palettes</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <input type="text" id="paletteNameInput" placeholder="Palette name…"
+            style="flex:1;padding:6px 8px;background:var(--surface2);border:1.5px solid var(--border);
+            border-radius:6px;color:var(--text);font-family:var(--font-mono);font-size:10px;outline:none;"
+            onkeydown="if(event.key==='Enter')savePalettePreset()">
+          <button class="btn btn-accent" onclick="savePalettePreset()" style="padding:6px 10px;font-size:10px;">+ Save</button>
+        </div>
+        <div id="savedPalettesGrid" style="display:flex;flex-direction:column;gap:5px;"></div>
+        <div id="savedPalettesEmpty" style="font-size:10px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding:8px 0;">No saved palettes yet</div>
       </div>
     </div>
 
@@ -789,11 +933,6 @@
     </div>
 
     <div class="panel-section">
-      <div class="panel-title">Presets</div>
-      <div class="preset-grid" id="presetGrid"></div>
-    </div>
-
-    <div class="panel-section">
       <div class="panel-title">Animation</div>
       <div class="toggle-row" style="margin-bottom:12px;">
         <span class="toggle-label" style="color:var(--text);">▶ Animate Opacity</span>
@@ -802,11 +941,17 @@
       <div id="animControls" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
         <div class="control-group">
           <div class="control-label">Speed <span class="val" id="animSpeedVal">2.0s</span></div>
-          <input type="range" id="animSpeed" min="0.2" max="8" value="2" step="0.1">
+          <div class="slider-row">
+            <input type="range" id="animSpeed" min="0.2" max="8" value="2" step="0.1">
+            <input type="number" class="num-input" id="animSpeedNum" value="2" min="0.2" max="8" step="0.1">
+          </div>
         </div>
         <div class="control-group">
           <div class="control-label">Density <span class="val" id="animDensityVal">40%</span></div>
-          <input type="range" id="animDensity" min="1" max="100" value="40" step="1">
+          <div class="slider-row">
+            <input type="range" id="animDensity" min="1" max="100" value="40" step="1">
+            <input type="number" class="num-input" id="animDensityNum" value="40" min="1" max="100" step="1">
+          </div>
         </div>
         <div class="panel-title" style="margin-bottom:8px;">Easing Curve</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
@@ -821,19 +966,31 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-label">P1x <span class="val" id="bp1xVal">0.42</span></div>
-              <input type="range" id="bp1x" min="0" max="1" value="0.42" step="0.01">
+              <div class="slider-row">
+                <input type="range" id="bp1x" min="0" max="1" value="0.42" step="0.01">
+                <input type="number" class="num-input" id="bp1xNum" value="0.42" min="0" max="1" step="0.01">
+              </div>
             </div>
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-label">P1y <span class="val" id="bp1yVal">0.00</span></div>
-              <input type="range" id="bp1y" min="-2" max="2" value="0" step="0.01">
+              <div class="slider-row">
+                <input type="range" id="bp1y" min="-2" max="2" value="0" step="0.01">
+                <input type="number" class="num-input" id="bp1yNum" value="0" min="-2" max="2" step="0.01">
+              </div>
             </div>
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-label">P2x <span class="val" id="bp2xVal">0.58</span></div>
-              <input type="range" id="bp2x" min="0" max="1" value="0.58" step="0.01">
+              <div class="slider-row">
+                <input type="range" id="bp2x" min="0" max="1" value="0.58" step="0.01">
+                <input type="number" class="num-input" id="bp2xNum" value="0.58" min="0" max="1" step="0.01">
+              </div>
             </div>
             <div class="control-group" style="margin-bottom:0;">
               <div class="control-label">P2y <span class="val" id="bp2yVal">1.00</span></div>
-              <input type="range" id="bp2y" min="-2" max="2" value="1" step="0.01">
+              <div class="slider-row">
+                <input type="range" id="bp2y" min="-2" max="2" value="1" step="0.01">
+                <input type="number" class="num-input" id="bp2yNum" value="1" min="-2" max="2" step="0.01">
+              </div>
             </div>
           </div>
         </div>
@@ -1155,11 +1312,11 @@ function lhCellOpacity(cx,cy,W,H) {
   return state.litOpacityMin+(1-state.litOpacityMin)*(1-t*0.75);
 }
 
-function drawLitHex(nowMs) {
+function drawLitHex(nowMs, forExport = false) {
   const W=canvas.width, H=canvas.height;
 
-  // Background — solid fill, no vignette
-  if (!state.bgTransparent) {
+  // Background — always shown in preview; skipped in export when transparent is on
+  if (!forExport || !state.bgTransparent) {
     ctx.fillStyle = state.bgColor;
     ctx.fillRect(0,0,W,H);
   }
@@ -1400,12 +1557,12 @@ function stopAnimLoop() {
   else drawPattern(animElapsedMs); // magnet still active, just redraw statically
 }
 
-function drawPattern(nowMs = 0) {
+function drawPattern(nowMs = 0, forExport = false) {
   initRng(state.seed);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // background
-  if (!state.bgTransparent) {
+  // background — always shown in preview; skipped in export when transparent is on
+  if (!forExport || !state.bgTransparent) {
     ctx.fillStyle = state.bgColor;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -1565,7 +1722,7 @@ function drawPattern(nowMs = 0) {
       break;
     }
     case 'lithex': {
-      count = drawLitHex(nowMs);
+      count = drawLitHex(nowMs, forExport);
       break;
     }
   }
@@ -1841,33 +1998,14 @@ function applyBgColor(hex, source) {
   drawPattern(animElapsedMs);
 }
 
-function toggleBgTransparent() {
+// BG transparent export toggle — only affects PNG/SVG export, not canvas preview
+document.getElementById('bgTransparentToggle').addEventListener('click', function() {
   state.bgTransparent = !state.bgTransparent;
-  const btn = document.getElementById('bgTransparentBtn');
-  const colorRow = document.querySelector('.color-row');
-  const hexRow = btn.closest('div');
-  const canvasWrap = document.querySelector('.canvas-wrap');
-
-  // Visual feedback on the button
-  btn.style.borderColor = state.bgTransparent ? 'var(--accent3)' : 'var(--border)';
-  btn.style.background = state.bgTransparent ? 'rgba(255,77,109,0.12)' : 'var(--surface2)';
-
-  // Dim the color controls when transparent
-  const opacity = state.bgTransparent ? '0.35' : '1';
-  const pointer = state.bgTransparent ? 'none' : 'auto';
-  colorRow.style.opacity = opacity;
-  colorRow.style.pointerEvents = pointer;
-  document.getElementById('bgColorPicker').style.pointerEvents = pointer;
-  document.getElementById('bgColorPicker').style.opacity = opacity;
-  document.getElementById('bgHexInput').style.opacity = opacity;
-  document.getElementById('bgHexInput').style.pointerEvents = pointer;
-
-  // Checkerboard on canvas wrap
-  if (canvasWrap) canvasWrap.classList.toggle('transparent-bg', state.bgTransparent);
-
-  drawPattern(animElapsedMs);
-}
-window.toggleBgTransparent = toggleBgTransparent;
+  this.classList.toggle('on', state.bgTransparent);
+});
+window.toggleBgTransparent = function() {
+  document.getElementById('bgTransparentToggle').click();
+};
 
 document.querySelectorAll('.color-swatch').forEach(sw => {
   sw.addEventListener('click', () => {
@@ -1904,7 +2042,6 @@ bgHexInput.addEventListener('keydown', e => {
 function renderPalette() {
   const container = document.getElementById('paletteColors');
   const addBtn = document.getElementById('addColorBtn');
-  // remove old swatches
   container.querySelectorAll('.palette-color').forEach(el => el.remove());
   state.palette.forEach((color, i) => {
     const div = document.createElement('div');
@@ -1912,24 +2049,42 @@ function renderPalette() {
     div.style.background = color;
     div.dataset.color = color;
     div.dataset.index = i;
-    const rm = document.createElement('div');
-    rm.className = 'rm';
-    rm.textContent = '×';
-    rm.onclick = (e) => {
-      e.stopPropagation();
-      if (state.palette.length > 1) {
-        state.palette.splice(i, 1);
-        renderPalette(); drawPattern(animElapsedMs);
-      }
-    };
-    div.appendChild(rm);
+
+    // In auto mode, only show delete on non-base swatches if they're auto-generated
+    if (!autoPaletteState.enabled || i === 0) {
+      const rm = document.createElement('div');
+      rm.className = 'rm';
+      rm.textContent = '×';
+      rm.onclick = (e) => {
+        e.stopPropagation();
+        if (autoPaletteState.enabled) return; // don't allow remove in auto mode
+        if (state.palette.length > 1) {
+          state.palette.splice(i, 1);
+          renderPalette(); drawPattern(animElapsedMs);
+        }
+      };
+      div.appendChild(rm);
+    }
+
     div.onclick = () => {
+      if (autoPaletteState.enabled && i !== 0) return; // only base color clickable in auto mode
       document.getElementById('colorPickerHidden').dataset.index = i;
       document.getElementById('colorPickerHidden').value = color;
       document.getElementById('colorPickerHidden').click();
     };
+
+    // Dim auto-generated swatches slightly to show they're derived
+    if (autoPaletteState.enabled && i > 0) {
+      div.style.opacity = '0.8';
+      div.style.cursor = 'default';
+      div.title = 'Auto-generated';
+    }
+
     container.insertBefore(div, addBtn);
   });
+
+  // Show/hide add button
+  if (addBtn) addBtn.style.display = autoPaletteState.enabled ? 'none' : 'flex';
 }
 
 document.getElementById('addColorBtn').onclick = () => {
@@ -1945,8 +2100,13 @@ document.getElementById('colorPickerHidden').addEventListener('input', e => {
   } else {
     state.palette[parseInt(idx)] = e.target.value;
   }
-  renderPalette();
-  drawPattern(animElapsedMs);
+  // If auto palette is on and base color changed, regenerate all
+  if (autoPaletteState.enabled && (idx === '0' || idx === 'new')) {
+    applyAutoPalette();
+  } else {
+    renderPalette();
+    drawPattern(animElapsedMs);
+  }
 });
 
 function applyPalette(colors) {
@@ -1956,7 +2116,210 @@ function applyPalette(colors) {
 }
 window.applyPalette = applyPalette;
 
-// Seed
+// ─── AUTO PALETTE ─────────────────────────────────────────────────────────────
+const autoPaletteState = { enabled: false, slots: 4, mode: 'shades' };
+
+// Global hex→rgb helper (used by hexToHsl and Lottie export)
+function hexToRgb(hex) {
+  const h = hex.replace('#','');
+  return [parseInt(h.substring(0,2),16), parseInt(h.substring(2,4),16), parseInt(h.substring(4,6),16)];
+}
+
+// Convert hex ↔ HSL
+function hexToHsl(hex) {
+  let [r,g,b] = hexToRgb(hex).map(v => v/255);
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h, s, l = (max+min)/2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max) {
+      case r: h = ((g-b)/d + (g<b?6:0))/6; break;
+      case g: h = ((b-r)/d + 2)/6; break;
+      case b: h = ((r-g)/d + 4)/6; break;
+    }
+  }
+  return [h*360, s*100, l*100];
+}
+
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360;
+  s = Math.max(0, Math.min(100, s));
+  l = Math.max(0, Math.min(100, l));
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1-l);
+  const f = n => {
+    const k = (n + h/30) % 12;
+    return l - a * Math.max(-1, Math.min(k-3, 9-k, 1));
+  };
+  return '#' + [f(0),f(8),f(4)].map(v =>
+    Math.round(v*255).toString(16).padStart(2,'0')
+  ).join('');
+}
+
+function generateAutoPalette(baseHex, slots, mode) {
+  const [h, s, l] = hexToHsl(baseHex);
+  const colors = [baseHex];
+  const n = slots - 1;
+
+  switch (mode) {
+    case 'shades':
+      // Darken progressively
+      for (let i = 1; i <= n; i++)
+        colors.push(hslToHex(h, s, Math.max(8, l - (l * 0.22 * i))));
+      break;
+    case 'tints':
+      // Lighten progressively
+      for (let i = 1; i <= n; i++)
+        colors.push(hslToHex(h, Math.max(10, s - s*0.15*i), Math.min(92, l + (100-l)*0.22*i)));
+      break;
+    case 'analogous':
+      // Shift hue ±20° per step, alternate sides
+      for (let i = 1; i <= n; i++) {
+        const shift = 22 * Math.ceil(i/2) * (i%2===1 ? 1 : -1);
+        colors.push(hslToHex(h + shift, s, l));
+      }
+      break;
+    case 'complementary':
+      // Base + complement + their shades
+      for (let i = 1; i <= n; i++) {
+        const hueShift = i % 2 === 1 ? 180 : 0;
+        const lShift = Math.floor(i/2) * -15;
+        colors.push(hslToHex(h + hueShift, s, Math.max(10, l + lShift)));
+      }
+      break;
+    case 'triadic':
+      for (let i = 1; i <= n; i++)
+        colors.push(hslToHex(h + 120 * i, s, l));
+      break;
+    case 'pastel':
+      for (let i = 1; i <= n; i++)
+        colors.push(hslToHex(h + 40*i, Math.max(30, s*0.5), Math.min(88, l + 25)));
+      break;
+  }
+  return colors;
+}
+
+function applyAutoPalette() {
+  if (!autoPaletteState.enabled) return;
+  const base = state.palette[0] || '#c8ff00';
+  state.palette = generateAutoPalette(base, autoPaletteState.slots, autoPaletteState.mode);
+  renderPalette();
+  drawPattern(animElapsedMs);
+}
+
+// Auto palette toggle
+document.getElementById('autoPaletteToggle').addEventListener('click', function() {
+  autoPaletteState.enabled = !autoPaletteState.enabled;
+  this.classList.toggle('on', autoPaletteState.enabled);
+  const ctrl = document.getElementById('autoPaletteControls');
+  const addBtn = document.getElementById('addColorBtn');
+  ctrl.style.display = autoPaletteState.enabled ? 'block' : 'none';
+  addBtn.style.display = autoPaletteState.enabled ? 'none' : 'flex';
+  if (autoPaletteState.enabled) applyAutoPalette();
+  else renderPalette();
+});
+
+// Slots buttons
+document.querySelectorAll('[data-slots]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-slots]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    autoPaletteState.slots = parseInt(btn.dataset.slots);
+    applyAutoPalette();
+  });
+});
+
+// Auto mode buttons
+document.querySelectorAll('[data-automode]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-automode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    autoPaletteState.mode = btn.dataset.automode;
+    applyAutoPalette();
+  });
+});
+
+// ─── PALETTE PRESETS ──────────────────────────────────────────────────────────
+const PALETTE_PRESETS_KEY = 'patternlab_palette_presets';
+
+function loadPalettePresets() {
+  try { return JSON.parse(localStorage.getItem(PALETTE_PRESETS_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function savePalettePresetsToStorage(presets) {
+  try { localStorage.setItem(PALETTE_PRESETS_KEY, JSON.stringify(presets)); }
+  catch(e) { toast('Storage full'); }
+}
+
+function savePalettePreset() {
+  const input = document.getElementById('paletteNameInput');
+  const name = input.value.trim() || ('Palette ' + (loadPalettePresets().length + 1));
+  const presets = loadPalettePresets();
+  presets.unshift({ name, colors: [...state.palette], id: Date.now() });
+  savePalettePresetsToStorage(presets);
+  input.value = '';
+  renderSavedPalettes();
+  toast('Palette "' + name + '" saved!');
+}
+window.savePalettePreset = savePalettePreset;
+
+function deletePalettePreset(id) {
+  const presets = loadPalettePresets().filter(p => p.id !== id);
+  savePalettePresetsToStorage(presets);
+  renderSavedPalettes();
+  toast('Palette deleted');
+}
+
+function renderSavedPalettes() {
+  const grid = document.getElementById('savedPalettesGrid');
+  const empty = document.getElementById('savedPalettesEmpty');
+  const presets = loadPalettePresets();
+  grid.innerHTML = '';
+  empty.style.display = presets.length === 0 ? 'block' : 'none';
+
+  presets.forEach(p => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;cursor:pointer;' +
+      'padding:5px 7px;border-radius:7px;border:1.5px solid var(--border);' +
+      'background:var(--surface2);transition:border-color 0.15s;';
+    row.onmouseenter = () => row.style.borderColor = 'var(--accent)';
+    row.onmouseleave = () => row.style.borderColor = 'var(--border)';
+
+    // Color strip
+    const strip = document.createElement('div');
+    strip.style.cssText = 'display:flex;gap:2px;flex:1;overflow:hidden;';
+    p.colors.forEach(c => {
+      const dot = document.createElement('div');
+      dot.style.cssText = `width:16px;height:16px;border-radius:4px;background:${c};flex-shrink:0;`;
+      strip.appendChild(dot);
+    });
+
+    // Name
+    const nm = document.createElement('span');
+    nm.textContent = p.name;
+    nm.style.cssText = 'font-size:9px;font-family:var(--font-mono);color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+
+    // Delete btn
+    const del = document.createElement('button');
+    del.textContent = '×';
+    del.title = 'Delete';
+    del.style.cssText = 'background:none;border:none;color:var(--muted);cursor:pointer;' +
+      'font-size:14px;padding:0 2px;line-height:1;flex-shrink:0;';
+    del.onmouseenter = () => del.style.color = 'var(--accent3)';
+    del.onmouseleave = () => del.style.color = 'var(--muted)';
+    del.onclick = e => { e.stopPropagation(); deletePalettePreset(p.id); };
+
+    row.appendChild(strip);
+    row.appendChild(nm);
+    row.appendChild(del);
+    row.onclick = () => { applyPalette(p.colors); };
+    grid.appendChild(row);
+  });
+}
+
+// ─── Seed
 function randomize() {
   state.seed = Math.floor(Math.random() * 99999);
   document.getElementById('seedInput').value = state.seed;
@@ -1990,12 +2353,16 @@ window.setSize = setSize;
 
 // ─── EXPORT ───────────────────────────────────────────────────────────────────
 function exportPNG() {
+  // Redraw without background if transparent export is on
+  if (state.bgTransparent) drawPattern(animElapsedMs, true);
   const link = document.createElement('a');
   link.download = 'pattern-' + state.seed + '.png';
   link.href = canvas.toDataURL('image/png');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  // Restore normal preview
+  if (state.bgTransparent) drawPattern(animElapsedMs);
   toast('PNG exported!');
 }
 
@@ -2550,12 +2917,20 @@ function drawBezierPreview() {
   const pad = 12;
   bctx.clearRect(0, 0, W, H);
 
+  // Read current theme colors from CSS variables
+  const cs = getComputedStyle(document.documentElement);
+  const cBg     = cs.getPropertyValue('--surface2').trim();
+  const cBorder  = cs.getPropertyValue('--border').trim();
+  const cAccent  = cs.getPropertyValue('--accent').trim();
+  const cAccent2 = cs.getPropertyValue('--accent2').trim();
+  const cMuted   = cs.getPropertyValue('--muted').trim();
+
   // Background
-  bctx.fillStyle = '#0a0a0f';
+  bctx.fillStyle = cBg;
   bctx.fillRect(0, 0, W, H);
 
   // Grid lines
-  bctx.strokeStyle = '#2a2a3a';
+  bctx.strokeStyle = cBorder;
   bctx.lineWidth = 1;
   for (let g = 0; g <= 4; g++) {
     const gx = pad + (g/4) * (W - pad*2);
@@ -2567,13 +2942,11 @@ function drawBezierPreview() {
   const [p1x, p1y, p2x, p2y] = state.animBezier;
   const fn = cubicBezier(p1x, p1y, p2x, p2y);
 
-  // Map t(0..1) → canvas coords
   function tx(t) { return pad + t * (W - pad*2); }
-  // y: 0=bottom, 1=top; clamp to visible area
   function ty(v) { return H - pad - Math.max(-0.5, Math.min(1.5, v)) * (H - pad*2); }
 
   // Draw control point handles
-  bctx.strokeStyle = '#3a3a5a';
+  bctx.strokeStyle = cMuted;
   bctx.lineWidth = 1;
   bctx.setLineDash([3,3]);
   bctx.beginPath(); bctx.moveTo(tx(0), ty(0)); bctx.lineTo(tx(p1x), ty(p1y)); bctx.stroke();
@@ -2582,14 +2955,14 @@ function drawBezierPreview() {
 
   // Control points
   [[p1x,p1y],[p2x,p2y]].forEach(([cx,cy]) => {
-    bctx.fillStyle = '#7b61ff';
+    bctx.fillStyle = cAccent2;
     bctx.beginPath();
     bctx.arc(tx(cx), ty(cy), 3.5, 0, Math.PI*2);
     bctx.fill();
   });
 
   // Curve
-  bctx.strokeStyle = '#c8ff00';
+  bctx.strokeStyle = cAccent;
   bctx.lineWidth = 2;
   bctx.beginPath();
   for (let step = 0; step <= 80; step++) {
@@ -2601,7 +2974,7 @@ function drawBezierPreview() {
   bctx.stroke();
 
   // Endpoints
-  bctx.fillStyle = '#c8ff00';
+  bctx.fillStyle = cAccent;
   bctx.beginPath(); bctx.arc(tx(0), ty(0), 3, 0, Math.PI*2); bctx.fill();
   bctx.beginPath(); bctx.arc(tx(1), ty(1), 3, 0, Math.PI*2); bctx.fill();
 }
@@ -2687,6 +3060,9 @@ function applyUserPreset(snap) {
   setEl('bgColorPicker', state.bgColor);
   const bhi = document.getElementById('bgHexInput');
   if (bhi) bhi.value = state.bgColor.toUpperCase();
+  // Sync transparent export toggle
+  const btt = document.getElementById('bgTransparentToggle');
+  if (btt) btt.classList.toggle('on', !!state.bgTransparent);
 
   // Lit hex sliders
   setEl('litCellSize', state.litCellSize);    setTxt('litCellSizeVal', state.litCellSize);
@@ -2767,87 +3143,70 @@ function renderUserPresets() {
   });
 }
 
-// ─── PRESETS ──────────────────────────────────────────────────────────────────
-const PRESETS = [
-  { name:'NEON GRID', type:'grid', shape:'circle', spacing:36, size:12, palette:['#c8ff00','#7b61ff'], bg:'#0a0a0f', scaleVar:0, jitter:0, seed:42 },
-  { name:'HEX DRIFT', type:'hex', shape:'hexagon', spacing:44, size:18, palette:['#00d4ff','#7b61ff','#ff4d6d'], bg:'#0d1b2a', scaleVar:30, jitter:5, seed:99 },
-  { name:'STAR FIELD', type:'scatter', shape:'star', spacing:50, size:16, palette:['#ffffff','#ffeb3b','#00d4ff'], bg:'#060608', scaleVar:80, jitter:0, seed:777 },
-  { name:'WAVE DOT', type:'wave', shape:'dot', spacing:28, size:8, palette:['#ff4d6d','#ff8c00'], bg:'#1a0a12', scaleVar:20, jitter:8, seed:321 },
-  { name:'EARTH BRICK', type:'brick', shape:'square', spacing:38, size:22, palette:['#e8d5c4','#c4a882'], bg:'#2a1f14', scaleVar:0, jitter:0, seed:55 },
-  { name:'RADIAL', type:'radial', shape:'triangle', spacing:40, size:10, palette:['#c8ff00','#00ff88'], bg:'#0a0f0a', scaleVar:30, jitter:0, seed:11 },
-];
+// ─── THEME ────────────────────────────────────────────────────────────────────
+let isLight = false;
+function toggleTheme() {
+  isLight = !isLight;
+  document.documentElement.classList.toggle('light', isLight);
+  document.getElementById('themeIcon').textContent  = isLight ? '🌙' : '☀';
+  document.getElementById('themeLabel').textContent = isLight ? 'DARK' : 'LIGHT';
+  // Update canvas area bg to match theme
+  const canvasArea = document.querySelector('.canvas-area');
+  if (canvasArea) {
+    canvasArea.style.background = isLight
+      ? 'radial-gradient(circle at 50% 50%, #e8e8f5 0%, #d8d8e8 100%)'
+      : '';
+    canvasArea.style.backgroundImage = isLight ? 'none' : '';
+  }
+  // Redraw bezier preview with new theme colors
+  if (typeof drawBezierPreview === 'function') drawBezierPreview();
+}
+window.toggleTheme = toggleTheme;
 
-function buildPresets() {
-  const grid = document.getElementById('presetGrid');
-  PRESETS.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'preset-card';
-    const pc = document.createElement('canvas');
-    pc.width = 120; pc.height = 80;
-    card.appendChild(pc);
-    const nm = document.createElement('div');
-    nm.className = 'preset-name';
-    nm.textContent = p.name;
-    card.appendChild(nm);
+// ─── SLIDER ↔ NUMBER INPUT SYNC ──────────────────────────────────────────────
+// For every range input with a matching *Num input, keep them in sync.
+// This runs AFTER all other listeners so it just supplements them.
+function syncSliderNum(rangeId) {
+  const range = document.getElementById(rangeId);
+  const num   = document.getElementById(rangeId + 'Num');
+  if (!range || !num) return;
 
-    // Mini render
-    const pctx = pc.getContext('2d');
-    pctx.fillStyle = p.bg;
-    pctx.fillRect(0,0,120,80);
-    initRng(p.seed);
-    const sp2 = p.spacing * 0.5;
-    const sz2 = p.size * 0.4;
-    let pi = 0;
-    for (let y=sp2/2; y<80+sp2; y+=sp2) {
-      for (let x=sp2/2; x<120+sp2; x+=sp2) {
-        const c = p.palette[pi % p.palette.length];
-        pctx.fillStyle = c;
-        pctx.beginPath();
-        pctx.arc(x, y, sz2/2, 0, Math.PI*2);
-        pctx.fill();
-        pi++;
-      }
-    }
+  // Range → Num (already handled by existing listeners via val display,
+  // but we also need to update the number box)
+  range.addEventListener('input', () => { num.value = range.value; });
 
-    card.onclick = () => {
-      applyPreset(p);
-    };
-    grid.appendChild(card);
+  // Num → Range (user types in the box)
+  num.addEventListener('input', () => {
+    const v = parseFloat(num.value);
+    const mn = parseFloat(range.min), mx = parseFloat(range.max);
+    if (isNaN(v)) return;
+    const clamped = Math.min(mx, Math.max(mn, v));
+    range.value = clamped;
+    // Trigger the range's input event so existing listeners update state & canvas
+    range.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  num.addEventListener('blur', () => {
+    // Clamp and tidy on blur
+    const v = parseFloat(num.value);
+    const mn = parseFloat(range.min), mx = parseFloat(range.max);
+    if (isNaN(v)) { num.value = range.value; return; }
+    num.value = Math.min(mx, Math.max(mn, v));
+  });
+  num.addEventListener('keydown', e => {
+    if (e.key === 'Enter') num.blur();
   });
 }
 
-function applyPreset(p) {
-  state.patternType = p.type;
-  state.shape = p.shape;
-  state.spacing = p.spacing;
-  state.size = p.size;
-  state.palette = [...p.palette];
-  state.bgColor = p.bg;
-  state.scaleVar = p.scaleVar;
-  state.jitter = p.jitter;
-  state.seed = p.seed;
-  state.multiColor = true;
-
-  // Sync UI
-  document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === p.type));
-  document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === p.shape));
-  document.getElementById('spacing').value = p.spacing;
-  document.getElementById('spacingVal').textContent = p.spacing;
-  document.getElementById('size').value = p.size;
-  document.getElementById('sizeVal').textContent = p.size;
-  document.getElementById('scaleVar').value = p.scaleVar;
-  document.getElementById('scaleVarVal').textContent = p.scaleVar + '%';
-  document.getElementById('jitter').value = p.jitter;
-  document.getElementById('jitterVal').textContent = p.jitter;
-  document.getElementById('seedInput').value = p.seed;
-  state.bgColor = p.bg;
-
-  renderPalette();
-  drawPattern(animElapsedMs);
-  toast('Preset applied!');
-}
-
-// ─── TOAST ────────────────────────────────────────────────────────────────────
+// Wire up every slider that has a num-input pair
+[
+  'spacing','size','rotation','opacity','jitter','scaleVar',
+  'opacityVar','opacityMin','opacityMax',
+  'magnetRadius','magnetStrength','magnetPushAmount','magnetFalloff',
+  'litCellSize','litGap','litStrokeWidth','litIntensity',
+  'litEdgeContrast','litAmbient','litAccentDensity','litOpacityMin',
+  'animSpeed','animDensity',
+  'bp1x','bp1y','bp2x','bp2y'
+].forEach(syncSliderNum);
 function toast(msg) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -2860,8 +3219,8 @@ canvas.style.maxWidth = '600px';
 canvas.style.maxHeight = '600px';
 document.getElementById('seedInput').value = state.seed;
 renderPalette();
-buildPresets();
 renderUserPresets();
+renderSavedPalettes();
 drawBezierPreview();
 drawPattern(animElapsedMs);
 </script>
