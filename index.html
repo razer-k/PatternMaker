@@ -489,39 +489,58 @@
   <!-- LEFT PANEL -->
   <div class="panel">
     <div class="panel-section">
-      <div class="panel-title">Pattern Type</div>
-      <div class="pattern-tabs">
-        <button class="tab-btn active" data-type="grid">GRID</button>
-        <button class="tab-btn" data-type="hex">HEX</button>
-        <button class="tab-btn" data-type="diagonal">DIAGONAL</button>
-        <button class="tab-btn" data-type="radial">RADIAL</button>
-        <button class="tab-btn" data-type="wave">WAVE</button>
-        <button class="tab-btn" data-type="scatter">SCATTER</button>
-        <button class="tab-btn" data-type="brick">BRICK</button>
-        <button class="tab-btn" data-type="triangles">TRIANGLES</button>
-        <button class="tab-btn" data-type="lithex" style="grid-column:1/-1;background:rgba(200,160,60,0.08);border-color:rgba(200,160,60,0.3);color:#c8a040;">✦ LIT HEX</button>
+      <div class="panel-title">Type</div>
+      <select id="patternTypeSelect" style="
+        width:100%;padding:8px 10px;
+        background:var(--surface2);border:1.5px solid var(--border);
+        border-radius:7px;color:var(--text);
+        font-family:var(--font-mono);font-size:11px;
+        outline:none;cursor:pointer;appearance:none;
+        background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22><path d=%22M0 0l5 6 5-6z%22 fill=%22%235a5a7a%22/></svg>');
+        background-repeat:no-repeat;background-position:calc(100% - 10px) center;
+        padding-right:28px;">
+        <option value="shape">Shape Pattern</option>
+        <option value="lithex">✦ Lit Hex</option>
+        <option value="lines">━ Lines</option>
+      </select>
+    </div>
+
+    <!-- SHAPE TYPE — shown when Type = Shape -->
+    <div id="shapeTypeSection">
+      <div class="panel-section">
+        <div class="panel-title">Layout</div>
+        <div class="pattern-tabs">
+          <button class="tab-btn active" data-type="grid">GRID</button>
+          <button class="tab-btn" data-type="hex">HEX</button>
+          <button class="tab-btn" data-type="diagonal">DIAGONAL</button>
+          <button class="tab-btn" data-type="radial">RADIAL</button>
+          <button class="tab-btn" data-type="wave">WAVE</button>
+          <button class="tab-btn" data-type="scatter">SCATTER</button>
+          <button class="tab-btn" data-type="brick">BRICK</button>
+          <button class="tab-btn" data-type="triangles">TRIANGLES</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <div class="panel-title">Shape</div>
+        <div class="shape-grid">
+          <button class="shape-btn active" data-shape="circle" title="Circle">⬤</button>
+          <button class="shape-btn" data-shape="square" title="Square">⬛</button>
+          <button class="shape-btn" data-shape="diamond" title="Diamond">◆</button>
+          <button class="shape-btn" data-shape="triangle" title="Triangle">▲</button>
+          <button class="shape-btn" data-shape="cross" title="Cross">✚</button>
+          <button class="shape-btn" data-shape="star" title="Star">★</button>
+          <button class="shape-btn" data-shape="hexagon" title="Hexagon">⬡</button>
+          <button class="shape-btn" data-shape="ring" title="Ring">◯</button>
+          <button class="shape-btn" data-shape="line" title="Line">━</button>
+          <button class="shape-btn" data-shape="dot" title="Dot">·</button>
+          <button class="shape-btn" data-shape="wave" title="Wave">〜</button>
+          <button class="shape-btn" data-shape="arrow" title="Arrow">→</button>
+        </div>
       </div>
     </div>
 
-    <div class="panel-section">
-      <div class="panel-title">Shape</div>
-      <div class="shape-grid">
-        <button class="shape-btn active" data-shape="circle" title="Circle">⬤</button>
-        <button class="shape-btn" data-shape="square" title="Square">⬛</button>
-        <button class="shape-btn" data-shape="diamond" title="Diamond">◆</button>
-        <button class="shape-btn" data-shape="triangle" title="Triangle">▲</button>
-        <button class="shape-btn" data-shape="cross" title="Cross">✚</button>
-        <button class="shape-btn" data-shape="star" title="Star">★</button>
-        <button class="shape-btn" data-shape="hexagon" title="Hexagon">⬡</button>
-        <button class="shape-btn" data-shape="ring" title="Ring">◯</button>
-        <button class="shape-btn" data-shape="line" title="Line">━</button>
-        <button class="shape-btn" data-shape="dot" title="Dot">·</button>
-        <button class="shape-btn" data-shape="wave" title="Wave">〜</button>
-        <button class="shape-btn" data-shape="arrow" title="Arrow">→</button>
-      </div>
-    </div>
-
-    <div class="panel-section">
+    <div class="panel-section" id="sectionLayoutControls">
       <div class="panel-title">Layout Controls</div>
 
       <div class="control-group">
@@ -612,7 +631,7 @@
       </div>
     </div>
 
-    <div class="panel-section">
+    <div class="panel-section" id="sectionToggles">
       <div class="panel-title">Toggles</div>
       <div class="toggle-row">
         <span class="toggle-label">Stroke Only</span>
@@ -782,6 +801,86 @@
         <button class="tab-btn" data-fadedir="2" style="font-size:9px;padding:4px;">LEFT</button>
         <button class="tab-btn" data-fadedir="3" style="font-size:9px;padding:4px;">RIGHT</button>
         <button class="tab-btn" data-fadedir="4" style="font-size:9px;padding:4px;grid-column:1/-1;">NONE</button>
+      </div>
+    </div>
+  </div>
+
+    <!-- LINES CONTROLS — shown only when patternType === lines -->
+    <div class="panel-section" id="linesPanel" style="display:none;">
+    <div class="panel-title" style="margin-bottom:14px;">━ Lines Settings</div>
+
+    <div class="control-group">
+      <div class="control-label">Opacity <span class="val" id="linesBaseOpacityVal">100%</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesBaseOpacity" min="0" max="100" value="100" step="5">
+        <input type="number" class="num-input" id="linesBaseOpacityNum" value="100" min="0" max="100" step="5">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Spacing <span class="val" id="linesSpacingVal">24</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesSpacing" min="2" max="120" value="24" step="1">
+        <input type="number" class="num-input" id="linesSpacingNum" value="24" min="2" max="120" step="1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Line Length <span class="val" id="linesLengthVal">100%</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesLength" min="5" max="200" value="100" step="1">
+        <input type="number" class="num-input" id="linesLengthNum" value="100" min="5" max="200" step="1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Stroke Width <span class="val" id="linesStrokeVal">1</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesStroke" min="0.5" max="20" value="1" step="0.5">
+        <input type="number" class="num-input" id="linesStrokeNum" value="1" min="0.5" max="20" step="0.5">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Angle <span class="val" id="linesAngleVal">0°</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesAngle" min="-90" max="90" value="0" step="1">
+        <input type="number" class="num-input" id="linesAngleNum" value="0" min="-90" max="90" step="1">
+      </div>
+    </div>
+
+    <div style="height:1px;background:var(--border);margin:12px 0 12px;"></div>
+    <div class="panel-title" style="margin-bottom:10px;">Variance</div>
+
+    <div class="control-group">
+      <div class="control-label">Length Variance <span class="val" id="linesLengthVarVal">0%</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesLengthVar" min="0" max="100" value="0" step="1">
+        <input type="number" class="num-input" id="linesLengthVarNum" value="0" min="0" max="100" step="1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Offset Variance <span class="val" id="linesOffsetVarVal">0</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesOffsetVar" min="0" max="100" value="0" step="1">
+        <input type="number" class="num-input" id="linesOffsetVarNum" value="0" min="0" max="100" step="1">
+      </div>
+    </div>
+
+    <div class="control-group">
+      <div class="control-label">Stroke Variance <span class="val" id="linesStrokeVarVal">0%</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesStrokeVar" min="0" max="100" value="0" step="1">
+        <input type="number" class="num-input" id="linesStrokeVarNum" value="0" min="0" max="100" step="1">
+      </div>
+    </div>
+
+    <div class="control-group" style="margin-bottom:0;">
+      <div class="control-label">Opacity Variance <span class="val" id="linesOpacityVarVal">0%</span></div>
+      <div class="slider-row">
+        <input type="range" id="linesOpacityVar" min="0" max="100" value="0" step="1">
+        <input type="number" class="num-input" id="linesOpacityVarNum" value="0" min="0" max="100" step="1">
       </div>
     </div>
   </div>
@@ -1091,6 +1190,15 @@ const state = {
   litFadeDir: 0,
   litAccentColor: '#1a3a2a',
   litAccentDensity: 20,
+  // ── Lines ──
+  linesSpacing: 24,
+  linesLength: 100,
+  linesStroke: 1,
+  linesAngle: 0,
+  linesLengthVar: 0,
+  linesOffsetVar: 0,
+  linesStrokeVar: 0,
+  linesOpacityVar: 0,
   bgColor: '#0a0a0f',
   bgTransparent: false,
   palette: ['#c8ff00','#7b61ff','#ff4d6d','#00d4ff'],
@@ -1417,6 +1525,81 @@ function drawLitHex(nowMs, forExport = false) {
   return count;
 }
 
+// ─── LINES PATTERN ───────────────────────────────────────────────────────────
+function drawLines(nowMs) {
+  const W = canvas.width, H = canvas.height;
+  const angleRad = state.linesAngle * Math.PI / 180;
+
+  // We draw lines perpendicular to the angle direction.
+  // Strategy: rotate the whole context, then draw horizontal lines,
+  // then restore — this way the math is always simple.
+  const diagonal = Math.sqrt(W * W + H * H);
+  const sp = state.linesSpacing;
+  const numLines = Math.ceil(diagonal / sp) + 2;
+
+  // Base line length: percentage of diagonal
+  const baseLength = diagonal * (state.linesLength / 100);
+
+  let elemIdx = 0;
+
+  ctx.save();
+  // Rotate around canvas center
+  ctx.translate(W / 2, H / 2);
+  ctx.rotate(angleRad);
+
+  for (let i = -Math.ceil(numLines / 2); i <= Math.ceil(numLines / 2); i++) {
+    initRng(state.seed + i * 7 + 999); // stable per-line seed
+
+    const rng1 = seededRand();
+    const rng2 = seededRand();
+    const rng3 = seededRand();
+    const rng4 = seededRand();
+
+    // y position of this line (in rotated space)
+    const y = i * sp + (state.linesOffsetVar > 0 ? (rng1 - 0.5) * state.linesOffsetVar * sp * 0.5 : 0);
+
+    // Line length variance
+    const lenMult = state.linesLengthVar > 0
+      ? 1 - rng2 * (state.linesLengthVar / 100) * 0.6
+      : 1;
+    const lineLen = baseLength * lenMult;
+
+    // Stroke variance
+    const strokeMult = state.linesStrokeVar > 0
+      ? 1 - rng3 * (state.linesStrokeVar / 100) * 0.7
+      : 1;
+    const stroke = Math.max(0.3, state.linesStroke * strokeMult);
+
+    // Opacity variance
+    const baseAlpha = state.opacity / 100;
+    const alpha = state.linesOpacityVar > 0
+      ? baseAlpha * (1 - rng4 * (state.linesOpacityVar / 100) * 0.9)
+      : baseAlpha;
+
+    // Animation
+    const animMult = getAnimAlpha(elemIdx, nowMs);
+
+    // Color from palette
+    const color = getColor(elemIdx);
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha * animMult);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = stroke;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-lineLen / 2, y);
+    ctx.lineTo(lineLen / 2, y);
+    ctx.stroke();
+    ctx.restore();
+
+    elemIdx++;
+  }
+
+  ctx.restore();
+  return numLines;
+}
+
 // ─── CURSOR MAGNET ───────────────────────────────────────────────────────────
 let cursorPos = { x: -9999, y: -9999 };
 let rafId = null;
@@ -1735,6 +1918,10 @@ function drawPattern(nowMs = 0, forExport = false) {
       count = drawLitHex(nowMs, forExport);
       break;
     }
+    case 'lines': {
+      count = drawLines(nowMs);
+      break;
+    }
   }
   document.getElementById('statusElements').textContent = count + ' elements';
   document.getElementById('statusSeed').textContent = 'seed: ' + state.seed;
@@ -1837,13 +2024,47 @@ bindToggle('altRowToggle','altRow');
 bindToggle('multiColorToggle','multiColor');
 bindToggle('gradientToggle','sizeGradient');
 
-// ─── LIT HEX CONTROLS ────────────────────────────────────────────────────────
-const litHexPanel = document.getElementById('litHexPanel');
+// ─── TYPE DROPDOWN ────────────────────────────────────────────────────────────
+const litHexPanel     = document.getElementById('litHexPanel');
+const linesPanel      = document.getElementById('linesPanel');
+const shapeTypeSection = document.getElementById('shapeTypeSection');
 
-function showHideLitHexPanel() {
-  const isLit = state.patternType === 'lithex';
-  litHexPanel.style.display = isLit ? 'block' : 'none';
+function applyTypeMode(mode) {
+  // mode: 'shape' | 'lithex' | 'lines'
+  const isShape = mode === 'shape';
+  const isLit   = mode === 'lithex';
+  const isLines = mode === 'lines';
+
+  // Left panel section visibility
+  shapeTypeSection.style.display             = isShape ? 'block' : 'none';
+  litHexPanel.style.display                  = isLit   ? 'block' : 'none';
+  linesPanel.style.display                   = isLines ? 'block' : 'none';
+
+  // Shape-only sections (irrelevant for Lit Hex and Lines)
+  const shapeOnlySections = ['sectionLayoutControls', 'sectionToggles'];
+  shapeOnlySections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isShape ? 'block' : 'none';
+  });
+
+  if (isLit)   state.patternType = 'lithex';
+  if (isLines) state.patternType = 'lines';
+  // For shape mode, patternType is driven by the layout tab buttons
 }
+
+// Alias for legacy callers
+function showHideLitHexPanel() {
+  const sel = document.getElementById('patternTypeSelect');
+  if (sel) applyTypeMode(sel.value);
+}
+
+document.getElementById('patternTypeSelect').addEventListener('change', function() {
+  applyTypeMode(this.value);
+  drawPattern(animElapsedMs);
+});
+
+// Initialise on load
+applyTypeMode('shape');
 
 // Bind lit hex sliders
 function bindLit(id, key, suffix='') {
@@ -1861,6 +2082,35 @@ bindLit('litStrokeWidth', 'litStrokeWidth', '');
 bindLit('litIntensity',   'litIntensity',   '');
 bindLit('litEdgeContrast','litEdgeContrast','');
 bindLit('litAmbient',     'litAmbient',     '');
+
+// Bind lines sliders (reuse bindLit — same pattern)
+bindLit('linesSpacing',    'linesSpacing',    '');
+bindLit('linesLength',     'linesLength',     '%');
+bindLit('linesStroke',     'linesStroke',     '');
+bindLit('linesAngle',      'linesAngle',      '°');
+bindLit('linesLengthVar',  'linesLengthVar',  '%');
+bindLit('linesOffsetVar',  'linesOffsetVar',  '');
+bindLit('linesStrokeVar',  'linesStrokeVar',  '%');
+bindLit('linesOpacityVar', 'linesOpacityVar', '%');
+
+// Lines base opacity mirrors state.opacity
+(function() {
+  const el = document.getElementById('linesBaseOpacity');
+  const valEl = document.getElementById('linesBaseOpacityVal');
+  if (!el) return;
+  el.addEventListener('input', () => {
+    state.opacity = parseInt(el.value);
+    if (valEl) valEl.textContent = el.value + '%';
+    drawPattern(animElapsedMs);
+  });
+})();
+
+// Wire num-inputs for lines sliders
+[
+  'linesSpacing','linesLength','linesStroke','linesAngle',
+  'linesLengthVar','linesOffsetVar','linesStrokeVar','linesOpacityVar',
+  'linesBaseOpacity'
+].forEach(syncSliderNum);
 bindLit('litOpacityMin',  'litOpacityMin',  '');
 
 ['litCellColor','litEdgeTint','litAccentColor'].forEach(id => {
@@ -1910,11 +2160,6 @@ function handleLitWheel(e) {
   drawPattern(animElapsedMs);
 }
 updateLitArrow(state.litLightAngle);
-
-// Hook into pattern type switching to show/hide panel
-document.querySelectorAll('[data-type]').forEach(btn => {
-  btn.addEventListener('click', showHideLitHexPanel);
-});
 
 // Cursor Magnet
 const magnetControls = document.getElementById('magnetControls');
@@ -3093,12 +3338,20 @@ function applyUserPreset(snap) {
     document.getElementById(id).classList.toggle('on', state[key]);
   });
 
-  // Pattern type + shape
-  document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === state.patternType));
+  // Pattern type + shape — sync dropdown and layout tabs
+  const sel = document.getElementById('patternTypeSelect');
+  if (state.patternType === 'lithex') {
+    sel.value = 'lithex';
+    applyTypeMode('lithex');
+  } else if (state.patternType === 'lines') {
+    sel.value = 'lines';
+    applyTypeMode('lines');
+  } else {
+    sel.value = 'shape';
+    applyTypeMode('shape');
+    document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === state.patternType));
+  }
   document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === state.shape));
-
-  // Show/hide lit hex panel
-  showHideLitHexPanel();
 
   // Update direction wheel if lit hex
   if (typeof updateLitArrow === 'function') updateLitArrow(state.litLightAngle);
