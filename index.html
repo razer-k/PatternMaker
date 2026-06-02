@@ -417,6 +417,41 @@
   }
   .status-bar span { color: var(--text); }
 
+  .canvas-wrap {
+    transition: transform 0.12s ease-out;
+    transform-origin: center center;
+    will-change: transform;
+  }
+  .zoom-bar {
+    position: absolute; top: 14px; right: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 5px;
+    display: flex; align-items: center; gap: 2px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    z-index: 5;
+  }
+  .zoom-btn {
+    width: 26px; height: 26px;
+    border: none; background: transparent;
+    color: var(--text); cursor: pointer;
+    font-size: 16px; line-height: 1;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.12s;
+  }
+  .zoom-btn:hover { background: var(--surface2); }
+  .zoom-val {
+    min-width: 48px; height: 26px;
+    border: none; background: transparent;
+    color: var(--text); cursor: pointer;
+    font-family: var(--font-mono); font-size: 11px;
+    border-radius: 13px;
+    transition: background 0.12s;
+  }
+  .zoom-val:hover { background: var(--surface2); }
+
   /* SEED */
   .seed-row {
     display: flex; gap: 6px;
@@ -509,16 +544,24 @@
     <div id="shapeTypeSection">
       <div class="panel-section">
         <div class="panel-title">Layout</div>
-        <div class="pattern-tabs">
-          <button class="tab-btn active" data-type="grid">GRID</button>
-          <button class="tab-btn" data-type="hex">HEX</button>
-          <button class="tab-btn" data-type="diagonal">DIAGONAL</button>
-          <button class="tab-btn" data-type="radial">RADIAL</button>
-          <button class="tab-btn" data-type="wave">WAVE</button>
-          <button class="tab-btn" data-type="scatter">SCATTER</button>
-          <button class="tab-btn" data-type="brick">BRICK</button>
-          <button class="tab-btn" data-type="triangles">TRIANGLES</button>
-        </div>
+        <select id="layoutSelect" style="
+          width:100%;padding:8px 10px;
+          background:var(--surface2);border:1.5px solid var(--border);
+          border-radius:7px;color:var(--text);
+          font-family:var(--font-mono);font-size:11px;
+          outline:none;cursor:pointer;appearance:none;
+          background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22><path d=%22M0 0l5 6 5-6z%22 fill=%22%235a5a7a%22/></svg>');
+          background-repeat:no-repeat;background-position:calc(100% - 10px) center;
+          padding-right:28px;">
+          <option value="grid">Grid</option>
+          <option value="hex">Hex</option>
+          <option value="diagonal">Diagonal</option>
+          <option value="radial">Radial</option>
+          <option value="wave">Wave</option>
+          <option value="scatter">Scatter</option>
+          <option value="brick">Brick</option>
+          <option value="triangles">Triangles</option>
+        </select>
       </div>
 
       <div class="panel-section">
@@ -888,8 +931,13 @@
 
   <!-- CANVAS -->
   <div class="canvas-area">
-    <div class="canvas-wrap">
+    <div class="canvas-wrap" id="canvasWrap">
       <canvas id="patternCanvas" width="600" height="600"></canvas>
+    </div>
+    <div class="zoom-bar">
+      <button class="zoom-btn" id="zoomOutBtn" title="Zoom out">−</button>
+      <button class="zoom-val" id="zoomResetBtn" title="Reset to 100%">100%</button>
+      <button class="zoom-btn" id="zoomInBtn" title="Zoom in">+</button>
     </div>
     <div class="status-bar">
       <span id="statusSize">600 × 600</span>
@@ -999,6 +1047,41 @@
         <div id="savedPalettesGrid" style="display:flex;flex-direction:column;gap:5px;"></div>
         <div id="savedPalettesEmpty" style="font-size:10px;color:var(--muted);font-family:var(--font-mono);text-align:center;padding:8px 0;">No saved palettes yet</div>
       </div>
+
+      <!-- Color Zones -->
+      <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+        <div class="toggle-row" style="margin-bottom:0;">
+          <div>
+            <span class="toggle-label" style="color:var(--text);font-size:11px;">▦ Color Zones</span>
+            <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);margin-top:2px;">Color by patches, blended at borders</div>
+          </div>
+          <button class="toggle" id="colorZonesToggle"></button>
+        </div>
+        <div id="colorZoneControls" style="display:none;margin-top:12px;">
+          <div class="control-group">
+            <div class="control-label">Zone Size <span class="val" id="colorZoneScaleVal">0.12</span></div>
+            <div class="slider-row">
+              <input type="range" id="colorZoneScale" min="0.03" max="0.5" value="0.12" step="0.01">
+              <input type="number" class="num-input" id="colorZoneScaleNum" value="0.12" min="0.03" max="0.5" step="0.01">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Border Blend <span class="val" id="colorZoneBlendVal">50%</span></div>
+            <div class="slider-row">
+              <input type="range" id="colorZoneBlend" min="0" max="100" value="50" step="1">
+              <input type="number" class="num-input" id="colorZoneBlendNum" value="50" min="0" max="100" step="1">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Zone Drift <span class="val" id="colorZoneDriftVal">1.0</span></div>
+            <div class="slider-row">
+              <input type="range" id="colorZoneDrift" min="0" max="3" value="1" step="0.1">
+              <input type="number" class="num-input" id="colorZoneDriftNum" value="1" min="0" max="3" step="0.1">
+            </div>
+          </div>
+          <div style="font-size:9px;color:var(--muted);font-family:var(--font-mono);">Drift moves zones with the Blob animation (needs Animate on).</div>
+        </div>
+      </div>
     </div>
 
     <div class="panel-section">
@@ -1048,6 +1131,13 @@
         <button class="toggle" id="animToggle"></button>
       </div>
       <div id="animControls" style="opacity:0.35;pointer-events:none;transition:opacity 0.2s;">
+        <div class="panel-title" style="margin-bottom:8px;">Mode</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:12px;">
+          <button class="tab-btn active" data-animmode="flicker" id="animModeFlicker">FLICKER</button>
+          <button class="tab-btn" data-animmode="blob" id="animModeBlob">BLOB WAVE</button>
+        </div>
+
+        <div id="flickerControls">
         <div class="control-group">
           <div class="control-label">Speed <span class="val" id="animSpeedVal">2.0s</span></div>
           <div class="slider-row">
@@ -1062,7 +1152,57 @@
             <input type="number" class="num-input" id="animDensityNum" value="40" min="1" max="100" step="1">
           </div>
         </div>
-        <div class="panel-title" style="margin-bottom:8px;">Easing Curve</div>
+        </div>
+
+        <div id="blobControls" style="display:none;">
+          <div class="control-group">
+            <div class="control-label">Flow</div>
+            <select id="blobFlowSelect" style="
+              width:100%;padding:8px 10px;
+              background:var(--surface2);border:1.5px solid var(--border);
+              border-radius:7px;color:var(--text);
+              font-family:var(--font-mono);font-size:11px;
+              outline:none;cursor:pointer;appearance:none;
+              background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2210%22 height=%226%22 viewBox=%220 0 10 6%22><path d=%22M0 0l5 6 5-6z%22 fill=%22%235a5a7a%22/></svg>');
+              background-repeat:no-repeat;background-position:calc(100% - 10px) center;
+              padding-right:28px;">
+              <option value="drift">Drift — clouds slide &amp; morph</option>
+              <option value="ink">Ink — spreads &amp; dissolves</option>
+              <option value="breathe">Breathe — pulses in place</option>
+              <option value="wavefront">Wavefront — ripples outward</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Blob Size <span class="val" id="blobScaleVal">0.15</span></div>
+            <div class="slider-row">
+              <input type="range" id="blobScale" min="0.05" max="0.6" value="0.15" step="0.01">
+              <input type="number" class="num-input" id="blobScaleNum" value="0.15" min="0.05" max="0.6" step="0.01">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Drift Speed <span class="val" id="blobSpeedVal">0.30</span></div>
+            <div class="slider-row">
+              <input type="range" id="blobSpeed" min="0" max="2" value="0.3" step="0.01">
+              <input type="number" class="num-input" id="blobSpeedNum" value="0.3" min="0" max="2" step="0.01">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Edge Contrast <span class="val" id="blobContrastVal">3.0</span></div>
+            <div class="slider-row">
+              <input type="range" id="blobContrast" min="1" max="6" value="3" step="0.1">
+              <input type="number" class="num-input" id="blobContrastNum" value="3" min="1" max="6" step="0.1">
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label">Background Floor <span class="val" id="blobFloorVal">0%</span></div>
+            <div class="slider-row">
+              <input type="range" id="blobFloor" min="0" max="50" value="0" step="1">
+              <input type="number" class="num-input" id="blobFloorNum" value="0" min="0" max="50" step="1">
+            </div>
+          </div>
+        </div>
+
+        <div id="easingSection">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px;">
           <button class="tab-btn active" data-bezier="0.42,0,0.58,1" id="bezierEaseInOut">EASE</button>
           <button class="tab-btn" data-bezier="0,0,1,1" id="bezierLinear">LINEAR</button>
@@ -1104,6 +1244,7 @@
           </div>
         </div>
         <canvas id="bezierPreview" width="264" height="80" style="width:100%;border-radius:6px;border:1px solid var(--border);display:block;"></canvas>
+        </div>
       </div>
     </div>
 
@@ -1173,9 +1314,19 @@ const state = {
   magnetPushAmount: 1.0,
   magnetFalloff: 0,
   animEnabled: false,
+  animMode: 'flicker',   // 'flicker' | 'blob'
   animSpeed: 2.0,
   animDensity: 40,
   animBezier: [0.42, 0, 0.58, 1.0],
+  blobScale: 0.15,       // spatial frequency of blobs (smaller = larger blobs)
+  blobSpeed: 0.3,        // drift speed of the blob field
+  blobContrast: 3.0,     // edge sharpness of blobs
+  blobFloor: 0.0,        // min visibility between blobs (0 = fully fade out)
+  blobFlow: 'drift',     // 'drift' | 'ink' | 'breathe' | 'wavefront'
+  colorZones: false,     // color by spatial zones instead of per-element index
+  colorZoneScale: 0.12,  // size of color zones (smaller = larger zones)
+  colorZoneBlend: 0.5,   // 0..1 width of color blending at zone borders
+  colorZoneDrift: 1.0,   // how fast zones drift relative to blob speed
   // ── Lit Hex ──
   litCellSize: 72,
   litGap: 5,
@@ -1222,7 +1373,7 @@ function drawShape(x, y, size, color, rotation, alphaOverride, elementIndex, now
   ctx.translate(x, y);
   ctx.rotate(rotation * Math.PI / 180);
   let a = (alphaOverride !== undefined ? alphaOverride : state.opacity / 100);
-  if (elementIndex !== undefined && nowMs !== undefined) a *= getAnimAlpha(elementIndex, nowMs);
+  if (elementIndex !== undefined && nowMs !== undefined) a *= getAnimAlpha(elementIndex, nowMs, x, y);
   ctx.globalAlpha = Math.max(0, Math.min(1, a));
 
   if (state.strokeOnly) {
@@ -1314,9 +1465,74 @@ function drawShape(x, y, size, color, rotation, alphaOverride, elementIndex, now
   ctx.restore();
 }
 
-function getColor(index) {
+function getColor(index, x, y) {
   if (!state.multiColor) return state.palette[0] || '#c8ff00';
+
+  // ── Zone coloring: pick color from a smooth noise field by position, so
+  // neighbouring elements share a color (colored "patches") and colors blend
+  // across patch borders. Field drifts with blob time when animation is on. ──
+  if (state.colorZones && x !== undefined && y !== undefined && state.palette.length > 1) {
+    return getZoneColor(x, y);
+  }
+
   return state.palette[index % state.palette.length];
+}
+
+// Cache last hex→rgb conversions for blend speed
+const _hexRgbCache = {};
+function _hexToRgbArr(hex) {
+  if (_hexRgbCache[hex]) return _hexRgbCache[hex];
+  let h = hex.replace('#','');
+  if (h.length === 3) h = h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+  const r = parseInt(h.substring(0,2),16);
+  const g = parseInt(h.substring(2,4),16);
+  const b = parseInt(h.substring(4,6),16);
+  const arr = [r||0, g||0, b||0];
+  _hexRgbCache[hex] = arr;
+  return arr;
+}
+function _rgbToHex(r,g,b) {
+  const c = v => Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  return '#' + c(r) + c(g) + c(b);
+}
+
+// Returns a palette color (possibly interpolated between two adjacent palette
+// entries) based on a smooth simplex field sampled at (x,y).
+function getZoneColor(x, y) {
+  const pal = state.palette;
+  const n = pal.length;
+  // time-driven drift, tied to blob speed so zones move with the blobs
+  const t = (state.animEnabled ? (animElapsedMs / 1000) * state.blobSpeed : 0) * state.colorZoneDrift;
+  const freq = state.colorZoneScale * 0.012;
+  const za = Math.cos(t * 0.5) * 1.4, zb = Math.sin(t * 0.5) * 1.4;
+  // Field in 0..1, offset seed so it differs from the visibility blob field
+  let f = (simplex2D(x * freq + za + 101.7, y * freq + zb - 57.3) + 1) / 2;
+  f = Math.max(0, Math.min(0.99999, f));
+
+  // Map field onto palette positions; interpolate between the two nearest stops
+  const scaled = f * n;          // 0..n
+  const i0 = Math.floor(scaled) % n;
+  const i1 = (i0 + 1) % n;
+  let frac = scaled - Math.floor(scaled); // 0..1 within the band
+
+  if (state.colorZoneBlend <= 0) {
+    return pal[i0]; // hard zones (no blend) — kept for completeness
+  }
+  // Only blend within a border fraction; centers stay pure
+  const bw = state.colorZoneBlend; // 0..1 width of the blend band
+  let mix;
+  if (frac < bw * 0.5)      mix = 0.5 - frac / bw;        // approaching from prev
+  else if (frac > 1 - bw*0.5) mix = (frac - (1 - bw*0.5)) / bw;
+  else                       mix = 0;
+  mix = Math.max(0, Math.min(0.5, mix));
+
+  if (mix <= 0) return pal[i0];
+  // blend i0 toward neighbor (prev for low frac, next for high frac)
+  const neighbor = frac < 0.5 ? pal[(i0 - 1 + n) % n] : pal[i1];
+  const a = _hexToRgbArr(pal[i0]);
+  const b = _hexToRgbArr(neighbor);
+  const m = mix; // 0..0.5
+  return _rgbToHex(a[0]+(b[0]-a[0])*m, a[1]+(b[1]-a[1])*m, a[2]+(b[2]-a[2])*m);
 }
 
 function getElementOpacity(x, y, randVal) {
@@ -1466,7 +1682,7 @@ function drawLitHex(nowMs, forExport = false) {
       let opacity=lhCellOpacity(cx,cy,W,H);
 
       // Apply animation opacity multiplier if animation is on
-      const animMult=getAnimAlpha(elemIdx,nowMs);
+      const animMult=getAnimAlpha(elemIdx,nowMs,cx,cy);
       opacity*=animMult;
 
       // Cursor magnet scale
@@ -1576,11 +1792,11 @@ function drawLines(nowMs) {
       ? baseAlpha * (1 - rng4 * (state.linesOpacityVar / 100) * 0.9)
       : baseAlpha;
 
-    // Animation
-    const animMult = getAnimAlpha(elemIdx, nowMs);
+    // Animation (blob mode uses approximate world position of the line)
+    const animMult = getAnimAlpha(elemIdx, nowMs, W / 2, H / 2 + y);
 
-    // Color from palette
-    const color = getColor(elemIdx);
+    // Color from palette (zone mode uses approximate world position of the line)
+    const color = getColor(elemIdx, W / 2, H / 2 + y);
 
     ctx.save();
     ctx.globalAlpha = Math.max(0, alpha * animMult);
@@ -1682,9 +1898,124 @@ function cubicBezier(p1x, p1y, p2x, p2y) {
   };
 }
 
-// Returns animation opacity multiplier (0..1) for element at index, given current time
-function getAnimAlpha(index, nowMs) {
+// ── 2D Simplex noise (Stefan Gustavson / Jonas Wagner style), seeded ──────────
+// Permutation table is rebuilt whenever the seed changes so each seed gives a
+// different organic blob layout. Returns ~[-1,1].
+let _simplexPerm = null;
+let _simplexSeed = null;
+function _buildSimplex(seed) {
+  const p = new Uint8Array(256);
+  for (let i = 0; i < 256; i++) p[i] = i;
+  // Fisher–Yates shuffle driven by a small LCG seeded from `seed`
+  let s = (seed | 0) ^ 0x9e3779b9;
+  for (let i = 255; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) & 0xffffffff;
+    const j = (s >>> 0) % (i + 1);
+    const tmp = p[i]; p[i] = p[j]; p[j] = tmp;
+  }
+  const perm = new Uint8Array(512);
+  const permMod12 = new Uint8Array(512);
+  for (let i = 0; i < 512; i++) { perm[i] = p[i & 255]; permMod12[i] = perm[i] % 12; }
+  _simplexPerm = { perm, permMod12 };
+  _simplexSeed = seed;
+}
+const _SIMPLEX_GRAD = [
+  [1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[1,0],[-1,0],
+  [0,1],[0,-1],[0,1],[0,-1]
+];
+function simplex2D(xin, yin) {
+  if (_simplexPerm === null || _simplexSeed !== state.seed) _buildSimplex(state.seed);
+  const { perm, permMod12 } = _simplexPerm;
+  const F2 = 0.5 * (Math.sqrt(3) - 1);
+  const G2 = (3 - Math.sqrt(3)) / 6;
+  const s = (xin + yin) * F2;
+  const i = Math.floor(xin + s), j = Math.floor(yin + s);
+  const t = (i + j) * G2;
+  const x0 = xin - (i - t), y0 = yin - (j - t);
+  let i1, j1;
+  if (x0 > y0) { i1 = 1; j1 = 0; } else { i1 = 0; j1 = 1; }
+  const x1 = x0 - i1 + G2, y1 = y0 - j1 + G2;
+  const x2 = x0 - 1 + 2 * G2, y2 = y0 - 1 + 2 * G2;
+  const ii = i & 255, jj = j & 255;
+  let n0 = 0, n1 = 0, n2 = 0;
+  let t0 = 0.5 - x0*x0 - y0*y0;
+  if (t0 >= 0) { const g = _SIMPLEX_GRAD[permMod12[ii + perm[jj]]]; t0 *= t0; n0 = t0 * t0 * (g[0]*x0 + g[1]*y0); }
+  let t1 = 0.5 - x1*x1 - y1*y1;
+  if (t1 >= 0) { const g = _SIMPLEX_GRAD[permMod12[ii + i1 + perm[jj + j1]]]; t1 *= t1; n1 = t1 * t1 * (g[0]*x1 + g[1]*y1); }
+  let t2 = 0.5 - x2*x2 - y2*y2;
+  if (t2 >= 0) { const g = _SIMPLEX_GRAD[permMod12[ii + 1 + perm[jj + 1]]]; t2 *= t2; n2 = t2 * t2 * (g[0]*x2 + g[1]*y2); }
+  return 70 * (n0 + n1 + n2);
+}
+
+// Organic scalar field for blob waves. Returns ~[-1,1].
+// x,y in canvas pixels; t in seconds. The way the field evolves over time
+// depends on state.blobFlow:
+//   drift     — sample point pans + churns: clouds slide and morph
+//   ink       — field morphs in place (time as 3rd noise axis), no panning:
+//               blobs bloom, spread and dissolve like ink in water
+//   breathe   — same as ink but slower morph; pulsing handled in getAnimAlpha
+//   wavefront — radial wave spreading from a moving source point
+function blobNoise(x, y, t) {
+  const freq = state.blobScale * 0.012;
+  const nx = x * freq, ny = y * freq;
+  const flow = state.blobFlow;
+
+  if (flow === 'wavefront') {
+    // Spreading ripple from a slowly wandering source, modulated by noise
+    // so the front is irregular and organic rather than a perfect circle.
+    const W = canvas.width, H = canvas.height;
+    const srcX = W * (0.5 + 0.25 * Math.cos(t * 0.25));
+    const srcY = H * (0.5 + 0.25 * Math.sin(t * 0.21));
+    const dx = (x - srcX) * freq, dy = (y - srcY) * freq;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const warp = simplex2D(nx + t * 0.1, ny - t * 0.1) * 1.2; // wobble the front
+    const ring = Math.sin(dist * 1.4 - t * 1.6 + warp);
+    const detail = simplex2D(nx * 1.8 + 5.0, ny * 1.8 - 3.0);
+    return ring * 0.8 + detail * 0.2;
+  }
+
+  if (flow === 'ink' || flow === 'breathe') {
+    // Morph in place: feed time into a third noise dimension via two decorrelated
+    // 2D lookups whose offsets advance with t. The field blooms and dissolves
+    // without translating, which reads as spreading/ink.
+    const morph = flow === 'ink' ? t * 0.9 : t * 0.45;
+    const za = Math.cos(morph) * 1.6;
+    const zb = Math.sin(morph) * 1.6;
+    const base   = simplex2D(nx + za, ny + zb);
+    const base2  = simplex2D(nx - zb + 31.7, ny + za - 17.2);
+    const detail = simplex2D(nx * 2.1 + za * 1.4 + 11.3, ny * 2.1 + zb * 1.4 - 4.1);
+    return (base + base2) * 0.4 + detail * 0.2;
+  }
+
+  // default 'drift': pan + churn (original behaviour)
+  const ox = Math.cos(t * 0.6) * 1.3 + t * 0.15;
+  const oy = Math.sin(t * 0.5) * 1.3;
+  const base = simplex2D(nx + ox, ny + oy);
+  const detail = simplex2D(nx * 2.1 + ox * 1.7 + 11.3, ny * 2.1 + oy * 1.7 - 4.1);
+  return base * 0.75 + detail * 0.25;
+}
+
+// Returns animation opacity multiplier (0..1) for element at index, given current time.
+// For blob mode, pass element pixel coords (px,py) so blobs are spatially coherent.
+function getAnimAlpha(index, nowMs, px, py) {
   if (!state.animEnabled) return 1;
+
+  // ── Blob Wave mode: spatial visibility field evolving over time ──
+  if (state.animMode === 'blob') {
+    if (px === undefined || py === undefined) return 1; // need coords
+    const t = nowMs / 1000 * state.blobSpeed;
+    let v = (blobNoise(px, py, t) + 1) / 2;            // → 0..1
+
+    // Breathe: pulse the cutoff so blobs grow and shrink in place.
+    // Ink: slow drift of the cutoff so blobs bloom then recede.
+    let bias = 0;
+    if (state.blobFlow === 'breathe') bias = Math.sin(t * 1.2) * 0.18;
+    else if (state.blobFlow === 'ink') bias = Math.sin(t * 0.5) * 0.10;
+    v = Math.max(0, Math.min(1, v + bias));
+
+    v = Math.pow(v, state.blobContrast); // sharpen edges
+    return state.blobFloor + (1 - state.blobFloor) * v;
+  }
 
   const h = elemHash(index + state.seed * 7);
   // Decide if this element participates based on density
@@ -1777,7 +2108,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const r = state.rotation;
           const opR = seededRand();
           const alpha = getElementOpacity(x, y, opR);
-          drawShape(px + ox, py + oy, s, getColor(i), r, alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), r, alpha, i, nowMs);
           i++; count++;
         }
       }
@@ -1794,7 +2125,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const { ox, oy } = getCursorPushOffset(px, py);
           const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
           const alpha = getElementOpacity(x, y, seededRand());
-          drawShape(px + ox, py + oy, s, getColor(i), state.rotation, alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), state.rotation, alpha, i, nowMs);
           i++; count++;
         }
         row++;
@@ -1812,7 +2143,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const { ox, oy } = getCursorPushOffset(px, py);
           const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
           const alpha = getElementOpacity(x, y, seededRand());
-          drawShape(px + ox, py + oy, s, getColor(i), state.rotation + (state.altRow && row%2 ? 45 : 0), alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), state.rotation + (state.altRow && row%2 ? 45 : 0), alpha, i, nowMs);
           i++; count++;
         }
         row++;
@@ -1833,7 +2164,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           ctx.translate(canvas.width/2, canvas.height/2);
           ctx.rotate(Math.PI/4);
           ctx.translate(-canvas.width/2, -canvas.height/2);
-          drawShape(px + ox, py + oy, s, getColor(i), state.rotation, alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), state.rotation, alpha, i, nowMs);
           ctx.restore();
           i++; count++;
         }
@@ -1857,7 +2188,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const { ox, oy } = getCursorPushOffset(px, py);
           const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
           const alpha = getElementOpacity(x, y, seededRand());
-          drawShape(px + ox, py + oy, s, getColor(i), state.rotation + (angle * 180/Math.PI), alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), state.rotation + (angle * 180/Math.PI), alpha, i, nowMs);
           i++; count++;
         }
       }
@@ -1875,7 +2206,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const s = getVariedSize(state.size, x, y+wave, i) * getCursorSizeMultiplier(px, py);
           const rot = state.rotation + Math.cos((x/W)*Math.PI*4) * 30;
           const alpha = getElementOpacity(x, y+wave, seededRand());
-          drawShape(px + ox, py + oy, s, getColor(i), rot, alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), rot, alpha, i, nowMs);
           i++; count++;
         }
       }
@@ -1890,7 +2221,7 @@ function drawPattern(nowMs = 0, forExport = false) {
         const s = getVariedSize(state.size * (0.4 + seededRand()*0.8), x, y, i) * getCursorSizeMultiplier(x, y);
         const r = seededRand() * 360;
         const alpha = getElementOpacity(x, y, seededRand());
-        drawShape(x + ox, y + oy, s, getColor(i), state.rotation + r, alpha, i, nowMs);
+        drawShape(x + ox, y + oy, s, getColor(i, x, y), state.rotation + r, alpha, i, nowMs);
         count++;
       }
       break;
@@ -1907,7 +2238,7 @@ function drawPattern(nowMs = 0, forExport = false) {
           const s = getVariedSize(state.size, x, y, i) * getCursorSizeMultiplier(px, py);
           const flip = (i%2===0) ? 0 : 180;
           const alpha = getElementOpacity(x, y, seededRand());
-          drawShape(px + ox, py + oy, s, getColor(i), state.rotation+flip, alpha, i, nowMs);
+          drawShape(px + ox, py + oy, s, getColor(i, px, py), state.rotation+flip, alpha, i, nowMs);
           i++; count++;
         }
         row++;
@@ -1992,13 +2323,9 @@ document.querySelectorAll('[data-omode]').forEach(btn => {
   });
 });
 
-document.querySelectorAll('[data-type]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('[data-type]').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    state.patternType = btn.dataset.type;
-    drawPattern(animElapsedMs);
-  });
+document.getElementById('layoutSelect').addEventListener('change', function() {
+  state.patternType = this.value;
+  drawPattern(animElapsedMs);
 });
 
 document.querySelectorAll('.shape-btn').forEach(btn => {
@@ -2023,6 +2350,33 @@ bindToggle('strokeToggle','strokeOnly');
 bindToggle('altRowToggle','altRow');
 bindToggle('multiColorToggle','multiColor');
 bindToggle('gradientToggle','sizeGradient');
+
+// ─── COLOR ZONES ──────────────────────────────────────────────────────────────
+const colorZoneControls = document.getElementById('colorZoneControls');
+document.getElementById('colorZonesToggle').addEventListener('click', function() {
+  state.colorZones = !state.colorZones;
+  this.classList.toggle('on', state.colorZones);
+  colorZoneControls.style.display = state.colorZones ? 'block' : 'none';
+  drawPattern(animElapsedMs);
+});
+const colorZoneScaleEl = document.getElementById('colorZoneScale');
+colorZoneScaleEl.addEventListener('input', () => {
+  state.colorZoneScale = parseFloat(colorZoneScaleEl.value);
+  document.getElementById('colorZoneScaleVal').textContent = state.colorZoneScale.toFixed(2);
+  drawPattern(animElapsedMs);
+});
+const colorZoneBlendEl = document.getElementById('colorZoneBlend');
+colorZoneBlendEl.addEventListener('input', () => {
+  state.colorZoneBlend = parseInt(colorZoneBlendEl.value) / 100;
+  document.getElementById('colorZoneBlendVal').textContent = colorZoneBlendEl.value + '%';
+  drawPattern(animElapsedMs);
+});
+const colorZoneDriftEl = document.getElementById('colorZoneDrift');
+colorZoneDriftEl.addEventListener('input', () => {
+  state.colorZoneDrift = parseFloat(colorZoneDriftEl.value);
+  document.getElementById('colorZoneDriftVal').textContent = state.colorZoneDrift.toFixed(1);
+  drawPattern(animElapsedMs);
+});
 
 // ─── TYPE DROPDOWN ────────────────────────────────────────────────────────────
 const litHexPanel     = document.getElementById('litHexPanel');
@@ -2049,7 +2403,11 @@ function applyTypeMode(mode) {
 
   if (isLit)   state.patternType = 'lithex';
   if (isLines) state.patternType = 'lines';
-  // For shape mode, patternType is driven by the layout tab buttons
+  if (isShape) {
+    // Restore the selected shape layout (state may hold 'lithex'/'lines' from before)
+    const ls = document.getElementById('layoutSelect');
+    if (ls) state.patternType = ls.value;
+  }
 }
 
 // Alias for legacy callers
@@ -2589,13 +2947,28 @@ window.randomize = randomize;
 window.applySeed = applySeed;
 
 // Canvas size
+const FIT_BOX = 600; // preview fits within this many CSS px (longest side)
+// Scale that fits the canvas into FIT_BOX while preserving aspect ratio.
+// Display is never upscaled past 1:1 here (only the zoom control upscales).
+function getFitScale() {
+  return Math.min(1, FIT_BOX / Math.max(canvas.width, canvas.height));
+}
+// Apply proportional display size so 1 canvas pixel maps equally on both axes.
+function applyCanvasDisplaySize() {
+  const fit = getFitScale();
+  canvas.style.width  = (canvas.width  * fit) + 'px';
+  canvas.style.height = (canvas.height * fit) + 'px';
+  canvas.style.maxWidth = 'none';
+  canvas.style.maxHeight = 'none';
+  if (typeof updateZoomLabel === 'function') updateZoomLabel();
+}
+
 function applyCanvasSize() {
   const w = parseInt(document.getElementById('canvasW').value) || 600;
   const h = parseInt(document.getElementById('canvasH').value) || 600;
   canvas.width = w;
   canvas.height = h;
-  canvas.style.maxWidth = Math.min(w, 600) + 'px';
-  canvas.style.maxHeight = Math.min(h, 600) + 'px';
+  applyCanvasDisplaySize();
   drawPattern(animElapsedMs);
 }
 function setSize(w, h) {
@@ -2672,7 +3045,7 @@ function exportSVG() {
         const jx = (seededRand()-0.5)*state.jitter*2;
         const jy = (seededRand()-0.5)*state.jitter*2;
         const s = getVariedSize(state.size, x, y, i);
-        svgShapes += svgShape(x+jx, y+jy, s, getColor(i), state.rotation);
+        svgShapes += svgShape(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation);
         i++; count++;
       }
       row++;
@@ -2771,7 +3144,9 @@ function buildLottieJSON() {
   const W = canvas.width, H = canvas.height;
   const FPS = 60;
   // Duration: longest animated period × 1.5 cycles, capped at 12s
-  const maxPeriodSec = state.animEnabled ? state.animSpeed * 1.4 * 1.5 : 3;
+  const maxPeriodSec = state.animEnabled
+    ? (state.animMode === 'blob' ? 8 : state.animSpeed * 1.4 * 1.5)
+    : 3;
   const durationSec = Math.min(12, Math.max(2, maxPeriodSec));
   const totalFrames = Math.round(durationSec * FPS);
 
@@ -2824,6 +3199,33 @@ function buildLottieJSON() {
     // Opacity animation
     let opacityProp;
     const h = elemHash(elemIndex + state.seed * 7);
+
+    if (state.animEnabled && state.animMode === 'blob') {
+      // ── Blob Wave: sample spatial noise field over time at this element's pos ──
+      const SAMPLES = Math.min(120, Math.max(24, Math.round(totalFrames / 2)));
+      const keyframes = [];
+      for (let k = 0; k <= SAMPLES; k++) {
+        const t = k / SAMPLES;
+        const nowSec = t * durationSec;
+        const tt = nowSec * state.blobSpeed;
+        let v = (blobNoise(x, y, tt) + 1) / 2;
+        let bias = 0;
+        if (state.blobFlow === 'breathe') bias = Math.sin(tt * 1.2) * 0.18;
+        else if (state.blobFlow === 'ink') bias = Math.sin(tt * 0.5) * 0.10;
+        v = Math.max(0, Math.min(1, v + bias));
+        v = Math.pow(v, state.blobContrast);
+        const animMult = state.blobFloor + (1 - state.blobFloor) * v;
+        const opVal = Math.round(baseOpacity * animMult * 100);
+        const frame = Math.round(t * totalFrames);
+        if (k < SAMPLES) {
+          keyframes.push({ t: frame, s: [opVal], e: [opVal], o: { x:[0.5], y:[0.5] }, i: { x:[0.5], y:[0.5] } });
+        } else {
+          keyframes.push({ t: frame, s: [opVal] });
+        }
+        if (k > 0) keyframes[k-1].e = [opVal];
+      }
+      opacityProp = { a: 1, k: keyframes };
+    } else {
     const participates = state.animEnabled && (h % 100) < state.animDensity;
 
     if (!participates) {
@@ -2866,6 +3268,7 @@ function buildLottieJSON() {
       }
       opacityProp = { a: 1, k: keyframes };
     }
+    } // end flicker/blob branch
 
     const layer = {
       ty: 4, // shape layer
@@ -3011,7 +3414,7 @@ function collectElements(W, H, out) {
           const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
           seededRand(); // consume opR
           const s = getVariedSize(state.size, x, y, i);
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation);
         }
       break;
     case 'hex': {
@@ -3022,7 +3425,7 @@ function collectElements(W, H, out) {
           const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
           seededRand();
           const s = getVariedSize(state.size, x, y, i);
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation);
         }
         row++;
       }
@@ -3036,7 +3439,7 @@ function collectElements(W, H, out) {
           const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
           seededRand();
           const s = getVariedSize(state.size, x, y, i);
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+(state.altRow&&row%2?45:0));
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation+(state.altRow&&row%2?45:0));
         }
         row++;
       }
@@ -3053,7 +3456,7 @@ function collectElements(W, H, out) {
           const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
           seededRand();
           const s = getVariedSize(state.size, x, y, i);
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+(angle*180/Math.PI));
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation+(angle*180/Math.PI));
         }
       }
       break;
@@ -3066,7 +3469,7 @@ function collectElements(W, H, out) {
           seededRand();
           const s = getVariedSize(state.size, x, y+wave, i);
           const rot = state.rotation+Math.cos((x/W)*Math.PI*4)*30;
-          pushEl(x+jx, y+wave+jy, s, getColor(i), rot);
+          pushEl(x+jx, y+wave+jy, s, getColor(i, x+jx, y+wave+jy), rot);
         }
       break;
     case 'scatter': {
@@ -3076,7 +3479,7 @@ function collectElements(W, H, out) {
         const s = getVariedSize(state.size*(0.4+seededRand()*0.8), x, y, i);
         const r = seededRand()*360;
         seededRand();
-        pushEl(x, y, s, getColor(i), state.rotation+r);
+        pushEl(x, y, s, getColor(i, x, y), state.rotation+r);
       }
       break;
     }
@@ -3089,7 +3492,7 @@ function collectElements(W, H, out) {
           seededRand();
           const s = getVariedSize(state.size, x, y, i);
           const flip = (i%2===0)?0:180;
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation+flip);
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation+flip);
         }
         row++;
       }
@@ -3101,7 +3504,7 @@ function collectElements(W, H, out) {
           const jx = jrand()*state.jitter*2, jy = jrand()*state.jitter*2;
           seededRand();
           const s = getVariedSize(state.size, x, y, i);
-          pushEl(x+jx, y+jy, s, getColor(i), state.rotation);
+          pushEl(x+jx, y+jy, s, getColor(i, x+jx, y+jy), state.rotation);
         }
       break;
   }
@@ -3128,6 +3531,56 @@ const animDensityEl = document.getElementById('animDensity');
 animDensityEl.addEventListener('input', () => {
   state.animDensity = parseInt(animDensityEl.value);
   document.getElementById('animDensityVal').textContent = state.animDensity + '%';
+});
+
+// Animation mode tabs (Flicker / Blob Wave)
+const flickerControls = document.getElementById('flickerControls');
+const blobControls = document.getElementById('blobControls');
+const easingSection = document.getElementById('easingSection');
+function applyAnimModeUI() {
+  const isBlob = state.animMode === 'blob';
+  flickerControls.style.display = isBlob ? 'none' : 'block';
+  easingSection.style.display = isBlob ? 'none' : 'block';
+  blobControls.style.display = isBlob ? 'block' : 'none';
+}
+document.querySelectorAll('[data-animmode]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-animmode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.animMode = btn.dataset.animmode;
+    applyAnimModeUI();
+    drawPattern(animElapsedMs);
+  });
+});
+
+// Blob Wave sliders
+const blobFlowEl = document.getElementById('blobFlowSelect');
+blobFlowEl.addEventListener('change', () => {
+  state.blobFlow = blobFlowEl.value;
+  if (!state.animEnabled) drawPattern(animElapsedMs);
+});
+const blobScaleEl = document.getElementById('blobScale');
+blobScaleEl.addEventListener('input', () => {
+  state.blobScale = parseFloat(blobScaleEl.value);
+  document.getElementById('blobScaleVal').textContent = state.blobScale.toFixed(2);
+  if (!state.animEnabled) drawPattern(animElapsedMs);
+});
+const blobSpeedEl = document.getElementById('blobSpeed');
+blobSpeedEl.addEventListener('input', () => {
+  state.blobSpeed = parseFloat(blobSpeedEl.value);
+  document.getElementById('blobSpeedVal').textContent = state.blobSpeed.toFixed(2);
+});
+const blobContrastEl = document.getElementById('blobContrast');
+blobContrastEl.addEventListener('input', () => {
+  state.blobContrast = parseFloat(blobContrastEl.value);
+  document.getElementById('blobContrastVal').textContent = state.blobContrast.toFixed(1);
+  if (!state.animEnabled) drawPattern(animElapsedMs);
+});
+const blobFloorEl = document.getElementById('blobFloor');
+blobFloorEl.addEventListener('input', () => {
+  state.blobFloor = parseInt(blobFloorEl.value) / 100;
+  document.getElementById('blobFloorVal').textContent = blobFloorEl.value + '%';
+  if (!state.animEnabled) drawPattern(animElapsedMs);
 });
 
 // Bezier presets
@@ -3338,6 +3791,17 @@ function applyUserPreset(snap) {
     document.getElementById(id).classList.toggle('on', state[key]);
   });
 
+  // Color Zones (with fallbacks for presets saved before this feature)
+  if (state.colorZones === undefined) state.colorZones = false;
+  if (state.colorZoneScale === undefined) state.colorZoneScale = 0.12;
+  if (state.colorZoneBlend === undefined) state.colorZoneBlend = 0.5;
+  if (state.colorZoneDrift === undefined) state.colorZoneDrift = 1.0;
+  document.getElementById('colorZonesToggle').classList.toggle('on', state.colorZones);
+  document.getElementById('colorZoneControls').style.display = state.colorZones ? 'block' : 'none';
+  setEl('colorZoneScale', state.colorZoneScale); setTxt('colorZoneScaleVal', state.colorZoneScale.toFixed(2));
+  setEl('colorZoneBlend', Math.round(state.colorZoneBlend * 100)); setTxt('colorZoneBlendVal', Math.round(state.colorZoneBlend * 100) + '%');
+  setEl('colorZoneDrift', state.colorZoneDrift); setTxt('colorZoneDriftVal', state.colorZoneDrift.toFixed(1));
+
   // Pattern type + shape — sync dropdown and layout tabs
   const sel = document.getElementById('patternTypeSelect');
   if (state.patternType === 'lithex') {
@@ -3349,7 +3813,7 @@ function applyUserPreset(snap) {
   } else {
     sel.value = 'shape';
     applyTypeMode('shape');
-    document.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b.dataset.type === state.patternType));
+    document.getElementById('layoutSelect').value = state.patternType;
   }
   document.querySelectorAll('.shape-btn').forEach(b => b.classList.toggle('active', b.dataset.shape === state.shape));
 
@@ -3363,6 +3827,20 @@ function applyUserPreset(snap) {
   animControls.style.pointerEvents = state.animEnabled ? 'auto' : 'none';
   setEl('animSpeed', state.animSpeed); setTxt('animSpeedVal', state.animSpeed.toFixed(1) + 's');
   setEl('animDensity', state.animDensity); setTxt('animDensityVal', state.animDensity + '%');
+  // Blob wave controls + mode tabs
+  if (state.animMode === undefined) state.animMode = 'flicker';
+  if (state.blobFlow === undefined) state.blobFlow = 'drift';
+  if (state.blobScale === undefined) state.blobScale = 0.15;
+  if (state.blobSpeed === undefined) state.blobSpeed = 0.3;
+  if (state.blobContrast === undefined) state.blobContrast = 3.0;
+  if (state.blobFloor === undefined) state.blobFloor = 0.0;
+  setEl('blobScale', state.blobScale); setTxt('blobScaleVal', state.blobScale.toFixed(2));
+  setEl('blobSpeed', state.blobSpeed); setTxt('blobSpeedVal', state.blobSpeed.toFixed(2));
+  setEl('blobContrast', state.blobContrast); setTxt('blobContrastVal', state.blobContrast.toFixed(1));
+  setEl('blobFloor', Math.round(state.blobFloor * 100)); setTxt('blobFloorVal', Math.round(state.blobFloor * 100) + '%');
+  setEl('blobFlowSelect', state.blobFlow);
+  document.querySelectorAll('[data-animmode]').forEach(b => b.classList.toggle('active', b.dataset.animmode === state.animMode));
+  if (typeof applyAnimModeUI === 'function') applyAnimModeUI();
 
   renderPalette();
   drawPattern(animElapsedMs);
@@ -3468,6 +3946,8 @@ function syncSliderNum(rangeId) {
   'litCellSize','litGap','litStrokeWidth','litIntensity',
   'litEdgeContrast','litAmbient','litAccentDensity','litOpacityMin',
   'animSpeed','animDensity',
+  'blobScale','blobSpeed','blobContrast','blobFloor',
+  'colorZoneScale','colorZoneBlend','colorZoneDrift',
   'bp1x','bp1y','bp2x','bp2y'
 ].forEach(syncSliderNum);
 function toast(msg) {
@@ -3477,9 +3957,82 @@ function toast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ─── PREVIEW ZOOM (display-only; does not affect canvas resolution or export) ──
+const canvasWrap = document.getElementById('canvasWrap');
+let previewZoom = 1, panX = 0, panY = 0;
+const ZOOM_MIN = 0.25, ZOOM_MAX = 5;
+function updateZoomLabel() {
+  // True scale = how many screen px per canvas px = fit-scale × user zoom.
+  const truePct = Math.round(getFitScale() * previewZoom * 100);
+  document.getElementById('zoomResetBtn').textContent = truePct + '%';
+}
+function applyZoom() {
+  if (previewZoom === 1) { panX = 0; panY = 0; } // reset pan at 100%
+  canvasWrap.style.transform =
+    'translate(' + panX + 'px,' + panY + 'px) scale(' + previewZoom + ')';
+  updateZoomLabel();
+}
+function setZoom(z) {
+  previewZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z));
+  applyZoom();
+}
+function zoomStep(factor) { setZoom(previewZoom * factor); }
+function resetView() {
+  // If we're already at the fit view (zoom=1), jump to true 1:1 pixels;
+  // otherwise return to the default fit view. Lets one button do both.
+  const fit = getFitScale();
+  if (previewZoom === 1 && fit < 1) {
+    previewZoom = 1 / fit; // makes true scale = 100% (1 canvas px = 1 screen px)
+  } else {
+    previewZoom = 1;       // back to fit-in-view
+  }
+  panX = 0; panY = 0;
+  applyZoom();
+}
+document.getElementById('zoomInBtn').addEventListener('click', () => zoomStep(1.25));
+document.getElementById('zoomOutBtn').addEventListener('click', () => zoomStep(1 / 1.25));
+document.getElementById('zoomResetBtn').addEventListener('click', resetView);
+// Ctrl/Cmd + wheel to zoom over the canvas area
+document.querySelector('.canvas-area').addEventListener('wheel', (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  zoomStep(e.deltaY < 0 ? 1.1 : 1 / 1.1);
+}, { passive: false });
+// Shift+drag to pan when zoomed in (doesn't interfere with cursor magnet)
+let panning = false, panStart = null;
+const canvasArea = document.querySelector('.canvas-area');
+canvasArea.addEventListener('mousedown', (e) => {
+  if (!e.shiftKey || previewZoom === 1) return;
+  e.preventDefault();
+  panning = true;
+  panStart = { x: e.clientX - panX, y: e.clientY - panY };
+  canvasArea.style.cursor = 'grabbing';
+  canvasWrap.style.transition = 'none';
+});
+window.addEventListener('mousemove', (e) => {
+  if (!panning) return;
+  panX = e.clientX - panStart.x;
+  panY = e.clientY - panStart.y;
+  applyZoom();
+});
+window.addEventListener('mouseup', () => {
+  if (!panning) return;
+  panning = false;
+  canvasArea.style.cursor = '';
+  canvasWrap.style.transition = '';
+});
+// Keyboard: Ctrl/Cmd +/-/0 (ignore when typing in an input)
+window.addEventListener('keydown', (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+  if (e.key === '=' || e.key === '+') { e.preventDefault(); zoomStep(1.25); }
+  else if (e.key === '-') { e.preventDefault(); zoomStep(1 / 1.25); }
+  else if (e.key === '0') { e.preventDefault(); resetView(); }
+});
+
 // ─── INIT ─────────────────────────────────────────────────────────────────────
-canvas.style.maxWidth = '600px';
-canvas.style.maxHeight = '600px';
+applyCanvasDisplaySize();
 document.getElementById('seedInput').value = state.seed;
 renderPalette();
 renderUserPresets();
